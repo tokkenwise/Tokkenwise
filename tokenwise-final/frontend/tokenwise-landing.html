@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TokenWise — Know What Every AI Prompt Costs You</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#0d0d12;
+  --paper:#fafaf8;
+  --accent:#0aff87;
+  --accent-dark:#00c96a;
+  --electric:#7c6aff;
+  --fire:#ff4d1c;
+  --muted:#888;
+  --border:#e5e5e0;
+  --card:#fff;
+}
+html{scroll-behavior:smooth}
+body{background:var(--paper);color:var(--ink);font-family:'Instrument Sans',sans-serif;overflow-x:hidden}
+
+/* NAV */
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 48px;height:64px;
+  background:rgba(250,250,248,0.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+.nav-logo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.5px}
+.nav-logo em{color:var(--accent-dark);font-style:normal}
+.nav-links{display:flex;gap:32px;list-style:none}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;transition:color .15s}
+.nav-links a:hover{color:var(--ink)}
+.nav-cta{display:flex;gap:10px;align-items:center}
+.btn-ghost{background:none;border:1.5px solid var(--border);color:var(--ink);padding:8px 20px;border-radius:8px;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none}
+.btn-ghost:hover{border-color:var(--ink)}
+.btn-primary{background:var(--ink);color:var(--paper);padding:9px 22px;border-radius:8px;font-family:'Instrument Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .15s;text-decoration:none;display:inline-block}
+.btn-primary:hover{background:#1a1a24;transform:translateY(-1px)}
+
+/* HERO */
+.hero{
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:120px 48px 80px;position:relative;overflow:hidden;
+}
+.hero-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,201,106,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 60%, rgba(124,106,255,0.07) 0%, transparent 50%);
+  pointer-events:none;
+}
+.hero-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#fff;border:1.5px solid var(--border);
+  padding:6px 16px;border-radius:20px;
+  font-size:12px;font-weight:600;color:var(--muted);
+  margin-bottom:32px;letter-spacing:0.5px;
+  animation:fadeUp .5s ease both;
+}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent-dark);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+.hero h1{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-size:clamp(48px,7vw,88px);
+  font-weight:800;
+  line-height:1.0;
+  letter-spacing:-3px;
+  margin-bottom:28px;
+  max-width:900px;
+  animation:fadeUp .5s .1s ease both;
+}
+.hero h1 .line2{color:var(--muted)}
+.hero h1 .highlight{
+  position:relative;display:inline-block;
+  color:var(--ink);
+}
+.hero h1 .highlight::after{
+  content:'';position:absolute;bottom:-4px;left:0;right:0;height:6px;
+  background:var(--accent);border-radius:3px;z-index:-1;
+  transform:scaleX(0);transform-origin:left;
+  animation:underlineIn .5s .6s ease forwards;
+}
+@keyframes underlineIn{to{transform:scaleX(1)}}
+
+.hero-sub{
+  font-size:18px;color:var(--muted);max-width:520px;line-height:1.65;
+  margin-bottom:44px;animation:fadeUp .5s .2s ease both;
+}
+.hero-ctas{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;animation:fadeUp .5s .3s ease both}
+.btn-big{
+  background:var(--ink);color:var(--paper);
+  padding:14px 32px;border-radius:12px;
+  font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;
+  cursor:pointer;border:none;transition:all .2s;text-decoration:none;display:inline-block;
+}
+.btn-big:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(13,13,18,0.2)}
+.btn-big-ghost{
+  background:#fff;color:var(--ink);
+  border:2px solid var(--border);
+  padding:14px 32px;border-radius:12px;
+  font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;
+  cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block;
+}
+.btn-big-ghost:hover{border-color:var(--ink);transform:translateY(-2px)}
+
+.hero-social-proof{
+  margin-top:52px;display:flex;align-items:center;gap:16px;justify-content:center;
+  font-size:13px;color:var(--muted);animation:fadeUp .5s .4s ease both;
+}
+.avatar-stack{display:flex}
+.avatar{
+  width:32px;height:32px;border-radius:50%;border:2px solid var(--paper);
+  margin-left:-8px;background:var(--border);font-size:13px;
+  display:flex;align-items:center;justify-content:center;
+}
+.avatar:first-child{margin-left:0}
+.stars{color:#f59e0b;letter-spacing:-1px;font-size:14px}
+
+/* TICKER */
+.ticker{
+  background:var(--ink);color:var(--paper);
+  padding:14px 0;overflow:hidden;white-space:nowrap;
+  border-top:1px solid rgba(255,255,255,0.05);
+  border-bottom:1px solid rgba(255,255,255,0.05);
+}
+.ticker-inner{display:inline-flex;gap:0;animation:ticker 25s linear infinite}
+.ticker-item{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:0 32px;font-family:'DM Mono',monospace;font-size:12px;
+  color:rgba(255,255,255,0.5);letter-spacing:0.5px;
+}
+.ticker-item strong{color:var(--accent);font-weight:500}
+.ticker-sep{color:rgba(255,255,255,0.15)}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* MOCKUP */
+.mockup-section{padding:80px 48px;max-width:1100px;margin:0 auto}
+.mockup-wrap{
+  background:var(--ink);border-radius:24px;padding:3px;
+  box-shadow:0 40px 100px rgba(13,13,18,0.15);
+}
+.mockup-bar{
+  background:#1a1a24;border-radius:21px 21px 0 0;
+  padding:12px 20px;display:flex;align-items:center;gap:8px;
+}
+.dot-r{width:11px;height:11px;border-radius:50%;background:#ff5f57}
+.dot-y{width:11px;height:11px;border-radius:50%;background:#febc2e}
+.dot-g{width:11px;height:11px;border-radius:50%;background:#28c840}
+.mockup-url{
+  flex:1;background:#111118;border-radius:6px;
+  padding:5px 14px;font-family:'DM Mono',monospace;font-size:11px;color:#666;
+  margin:0 12px;
+}
+.mockup-body{background:#0a0a0f;border-radius:0 0 21px 21px;padding:0;overflow:hidden}
+
+/* Live counter widget preview */
+.widget-demo{
+  position:relative;padding:32px;
+  display:grid;grid-template-columns:1fr 280px;gap:20px;
+}
+.fake-textarea{
+  background:#111118;border:1px solid rgba(255,255,255,0.07);
+  border-radius:12px;padding:20px;min-height:200px;
+  font-family:'DM Mono',monospace;font-size:13px;color:#888;line-height:1.7;
+  position:relative;
+}
+.fake-cursor{
+  display:inline-block;width:2px;height:14px;background:var(--accent);
+  animation:blink 1s infinite;vertical-align:text-bottom;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.fake-widget{
+  background:#111118;border:1px solid rgba(255,255,255,0.08);border-radius:12px;
+  padding:18px;
+}
+.fw-header{font-family:'Bricolage Grotesque',sans-serif;font-size:13px;font-weight:700;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:6px}
+.fw-stat{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.fw-stat:last-child{border:none}
+.fw-key{font-size:11px;color:#555;font-family:'DM Mono',monospace}
+.fw-val{font-family:'DM Mono',monospace;font-size:13px;font-weight:500}
+.green{color:var(--accent)}
+.purple{color:#7c6aff}
+.orange{color:#d4a96a}
+.fw-bar{margin-top:12px}
+.fw-bar-label{display:flex;justify-content:space-between;font-size:10px;color:#444;font-family:'DM Mono',monospace;margin-bottom:5px}
+.fw-bar-track{height:3px;background:#1e1e2a;border-radius:3px}
+.fw-bar-fill{height:100%;width:23%;background:linear-gradient(90deg,var(--accent),#7c6aff);border-radius:3px}
+
+/* FEATURES */
+.features{padding:80px 48px;max-width:1100px;margin:0 auto}
+.section-label{
+  font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;
+}
+.section-title{
+  font-family:'Bricolage Grotesque',sans-serif;
+  font-size:clamp(32px,4vw,48px);font-weight:800;letter-spacing:-1.5px;
+  margin-bottom:56px;line-height:1.1;max-width:560px;
+}
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feat-card{
+  background:#fff;border:1.5px solid var(--border);border-radius:16px;
+  padding:28px;transition:transform .2s,border-color .2s,box-shadow .2s;
+}
+.feat-card:hover{transform:translateY(-4px);border-color:var(--ink);box-shadow:0 16px 40px rgba(13,13,18,0.08)}
+.feat-icon{font-size:28px;margin-bottom:16px}
+.feat-title{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:18px;margin-bottom:8px;letter-spacing:-0.3px}
+.feat-desc{font-size:14px;color:var(--muted);line-height:1.6}
+.feat-tag{
+  display:inline-block;margin-top:14px;
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;
+  padding:3px 10px;border-radius:20px;
+}
+.tag-free{background:rgba(0,201,106,0.1);color:var(--accent-dark)}
+.tag-pro{background:rgba(124,106,255,0.1);color:#7c6aff}
+
+/* HOW IT WORKS */
+.how{padding:80px 48px;background:var(--ink);color:var(--paper)}
+.how-inner{max-width:1100px;margin:0 auto}
+.how .section-label{color:rgba(255,255,255,0.3)}
+.how .section-title{color:var(--paper)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-top:0}
+.step{padding:28px 24px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:16px}
+.step-num{
+  font-family:'Bricolage Grotesque',sans-serif;font-size:48px;font-weight:800;
+  color:rgba(255,255,255,0.06);letter-spacing:-2px;line-height:1;margin-bottom:16px;
+}
+.step-title{font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:17px;margin-bottom:8px}
+.step-desc{font-size:13px;color:rgba(255,255,255,0.45);line-height:1.6}
+
+/* PRICING */
+.pricing{padding:80px 48px;max-width:1100px;margin:0 auto}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:0}
+.price-card{
+  background:#fff;border:1.5px solid var(--border);border-radius:20px;
+  padding:32px;position:relative;overflow:hidden;
+  transition:transform .2s,box-shadow .2s;
+}
+.price-card:hover{transform:translateY(-4px);box-shadow:0 20px 50px rgba(13,13,18,0.1)}
+.price-card.popular{
+  background:var(--ink);color:var(--paper);border-color:var(--ink);
+  transform:scale(1.02);
+}
+.price-card.popular:hover{transform:scale(1.02) translateY(-4px)}
+.popular-badge{
+  position:absolute;top:20px;right:20px;
+  background:var(--accent);color:var(--ink);
+  font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:1px;
+  padding:4px 10px;border-radius:20px;
+}
+.price-name{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px;margin-bottom:8px}
+.price-desc{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.5}
+.price-card.popular .price-desc{color:rgba(255,255,255,0.45)}
+.price-amount{
+  font-family:'Bricolage Grotesque',sans-serif;font-weight:800;
+  font-size:48px;letter-spacing:-2px;line-height:1;margin-bottom:4px;
+}
+.price-period{font-size:13px;color:var(--muted);margin-bottom:28px}
+.price-card.popular .price-period{color:rgba(255,255,255,0.4)}
+.price-divider{height:1px;background:var(--border);margin-bottom:24px}
+.price-card.popular .price-divider{background:rgba(255,255,255,0.1)}
+.price-features{list-style:none;display:flex;flex-direction:column;gap:10px;margin-bottom:28px}
+.price-features li{font-size:14px;display:flex;align-items:flex-start;gap:8px;line-height:1.4}
+.price-features li::before{content:'✓';font-weight:700;color:var(--accent-dark);flex-shrink:0;margin-top:1px}
+.price-card.popular .price-features li{color:rgba(255,255,255,0.8)}
+.price-card.popular .price-features li::before{color:var(--accent)}
+.price-btn{
+  width:100%;padding:13px;border-radius:12px;
+  font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;
+  cursor:pointer;border:none;transition:all .2s;
+}
+.price-btn-outline{background:none;border:2px solid var(--border);color:var(--ink)}
+.price-btn-outline:hover{border-color:var(--ink);transform:translateY(-1px)}
+.price-btn-solid{background:var(--paper);color:var(--ink)}
+.price-btn-solid:hover{background:var(--accent);transform:translateY(-1px)}
+.price-btn-dark{background:var(--ink);color:var(--paper);border:2px solid var(--border)}
+.price-btn-dark:hover{background:#1e1e2a;transform:translateY(-1px)}
+
+/* TESTIMONIALS */
+.testimonials{padding:80px 48px;background:#f5f5f0;overflow:hidden}
+.test-inner{max-width:1100px;margin:0 auto}
+.test-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:0}
+.test-card{
+  background:#fff;border:1.5px solid var(--border);border-radius:16px;padding:24px;
+}
+.test-stars{color:#f59e0b;font-size:14px;margin-bottom:12px}
+.test-quote{font-size:15px;line-height:1.65;margin-bottom:16px}
+.test-author{display:flex;align-items:center;gap:10px}
+.test-avatar{width:36px;height:36px;border-radius:50%;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:16px}
+.test-name{font-weight:600;font-size:13px}
+.test-role{font-size:12px;color:var(--muted)}
+
+/* FAQ */
+.faq{padding:80px 48px;max-width:800px;margin:0 auto}
+.faq-item{border-bottom:1.5px solid var(--border);padding:24px 0}
+.faq-q{
+  font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:17px;
+  cursor:pointer;display:flex;justify-content:space-between;align-items:center;
+  gap:16px;
+}
+.faq-q .icon{font-size:18px;color:var(--muted);flex-shrink:0;transition:transform .2s}
+.faq-a{font-size:14px;color:var(--muted);line-height:1.7;margin-top:12px;display:none}
+.faq-item.open .faq-a{display:block}
+.faq-item.open .icon{transform:rotate(45deg)}
+
+/* CTA */
+.cta-section{
+  padding:100px 48px;text-align:center;
+  background:var(--ink);color:var(--paper);
+  position:relative;overflow:hidden;
+}
+.cta-section::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,201,106,0.12) 0%, transparent 60%);
+  pointer-events:none;
+}
+.cta-section h2{
+  font-family:'Bricolage Grotesque',sans-serif;font-size:clamp(40px,6vw,72px);
+  font-weight:800;letter-spacing:-2.5px;line-height:1.05;max-width:700px;margin:0 auto 20px;
+}
+.cta-section p{color:rgba(255,255,255,0.45);font-size:16px;max-width:400px;margin:0 auto 40px}
+.cta-btn{
+  background:var(--accent);color:var(--ink);
+  padding:16px 40px;border-radius:14px;
+  font-family:'Bricolage Grotesque',sans-serif;font-size:18px;font-weight:800;
+  border:none;cursor:pointer;transition:all .2s;text-decoration:none;display:inline-block;
+}
+.cta-btn:hover{transform:translateY(-3px);box-shadow:0 20px 50px rgba(0,201,106,0.3)}
+
+/* FOOTER */
+footer{
+  background:var(--ink);border-top:1px solid rgba(255,255,255,0.06);
+  padding:40px 48px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-wrap:wrap;gap:16px;
+}
+.footer-logo{font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:18px;color:var(--paper)}
+.footer-logo em{color:var(--accent);font-style:normal}
+.footer-links{display:flex;gap:24px}
+.footer-links a{font-size:13px;color:rgba(255,255,255,0.35);text-decoration:none;transition:color .15s}
+.footer-links a:hover{color:rgba(255,255,255,0.7)}
+.footer-copy{font-size:12px;color:rgba(255,255,255,0.2)}
+
+/* MODAL */
+.modal-bg{
+  display:none;position:fixed;inset:0;z-index:1000;
+  background:rgba(13,13,18,0.7);backdrop-filter:blur(8px);
+  align-items:center;justify-content:center;
+}
+.modal-bg.open{display:flex}
+.modal{
+  background:var(--paper);border-radius:20px;padding:40px;width:100%;max-width:440px;
+  position:relative;animation:modalIn .2s ease;
+}
+@keyframes modalIn{from{opacity:0;transform:scale(0.95)}to{opacity:1;transform:scale(1)}}
+.modal-close{
+  position:absolute;top:16px;right:16px;background:none;border:none;
+  font-size:20px;color:var(--muted);cursor:pointer;width:32px;height:32px;
+  display:flex;align-items:center;justify-content:center;border-radius:8px;
+}
+.modal-close:hover{background:var(--border)}
+.modal h2{font-family:'Bricolage Grotesque',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:6px}
+.modal p{font-size:14px;color:var(--muted);margin-bottom:24px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.field input{
+  width:100%;padding:11px 14px;border-radius:10px;
+  border:1.5px solid var(--border);background:#fff;
+  font-family:'Instrument Sans',sans-serif;font-size:14px;color:var(--ink);outline:none;
+  transition:border-color .15s;
+}
+.field input:focus{border-color:var(--ink)}
+.modal-submit{
+  width:100%;background:var(--ink);color:var(--paper);
+  padding:13px;border-radius:12px;border:none;
+  font-family:'Bricolage Grotesque',sans-serif;font-size:16px;font-weight:700;
+  cursor:pointer;transition:all .15s;margin-top:4px;
+}
+.modal-submit:hover{background:#1a1a24}
+.modal-switch{text-align:center;font-size:13px;color:var(--muted);margin-top:16px}
+.modal-switch a{color:var(--ink);font-weight:600;cursor:pointer;text-decoration:none}
+.modal-divider{display:flex;align-items:center;gap:12px;margin:20px 0;color:var(--muted);font-size:12px}
+.modal-divider::before,.modal-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.btn-google{
+  width:100%;background:#fff;border:1.5px solid var(--border);
+  padding:11px;border-radius:12px;font-family:'Instrument Sans',sans-serif;
+  font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;gap:10px;transition:border-color .15s;
+}
+.btn-google:hover{border-color:var(--ink)}
+
+/* Animations */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* Responsive */
+@media(max-width:900px){
+  nav{padding:0 24px}
+  .nav-links{display:none}
+  .hero{padding:100px 24px 60px}
+  .features,.pricing,.faq,.mockup-section,.cta-section{padding:60px 24px}
+  .features-grid,.pricing-grid,.test-grid,.steps{grid-template-columns:1fr}
+  .how{padding:60px 24px}
+  .footer-links{display:none}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Token<em>Wise</em></div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#how">How it works</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#faq">FAQ</a></li>
+  </ul>
+  <div class="nav-cta">
+    <a class="btn-ghost" href="https://charming-paprenjak-a981d7.netlify.app/frontend/app.html">Log in</a>
+    <a class="btn-primary" href="https://charming-paprenjak-a981d7.netlify.app/frontend/app.html">Start free →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-badge"><span class="dot"></span> Now with Chrome Extension</div>
+  <h1>
+    Stop guessing<br>
+    <span class="line2">what your AI</span><br>
+    <span class="highlight">prompts cost</span>
+  </h1>
+  <p class="hero-sub">TokenWise shows you real-time token counts and costs as you type — inside ChatGPT, Claude, Gemini, Gmail, and everywhere you write.</p>
+  <div class="hero-ctas">
+    <a class="btn-big" href="https://charming-paprenjak-a981d7.netlify.app/frontend/app.html">Get TokenWise Free →</a>
+    <a class="btn-big-ghost" href="#pricing">See pricing</a>
+  </div>
+  <div class="hero-social-proof">
+    <div class="avatar-stack">
+      <div class="avatar">👩</div>
+      <div class="avatar">🧑</div>
+      <div class="avatar">👨</div>
+      <div class="avatar">👩‍💻</div>
+      <div class="avatar">🧑‍💼</div>
+    </div>
+    <div class="stars">★★★★★</div>
+    <span>Loved by <strong>2,400+</strong> prompt engineers & developers</span>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-inner">
+    <span class="ticker-item">⚡ Real-time token counting <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Works on <strong>ChatGPT</strong> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Works on <strong>Claude.ai</strong> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Works on <strong>Gemini</strong> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Works on <strong>Gmail</strong> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">💰 Cost estimates in real time <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">⚠️ Context window warnings <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">✨ AI prompt compression <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">📊 Monthly spend dashboard <span class="ticker-sep">·</span></span>
+    <!-- duplicate for seamless loop -->
+    <span class="ticker-item">⚡ Real-time token counting <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Works on <strong>ChatGPT</strong> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Works on <strong>Claude.ai</strong> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Works on <strong>Gemini</strong> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">Works on <strong>Gmail</strong> <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">💰 Cost estimates in real time <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">⚠️ Context window warnings <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">✨ AI prompt compression <span class="ticker-sep">·</span></span>
+    <span class="ticker-item">📊 Monthly spend dashboard <span class="ticker-sep">·</span></span>
+  </div>
+</div>
+
+<!-- MOCKUP -->
+<div class="mockup-section">
+  <div class="mockup-wrap">
+    <div class="mockup-bar">
+      <div class="dot-r"></div><div class="dot-y"></div><div class="dot-g"></div>
+      <div class="mockup-url">chat.openai.com</div>
+    </div>
+    <div class="mockup-body">
+      <div class="widget-demo">
+        <div class="fake-textarea">
+          You are an expert Python developer specializing in async systems. I have a FastAPI application that's experiencing intermittent 503 errors under load. The error occurs when more than 50 concurrent requests hit the /process endpoint simultaneously. Here's the relevant code:<br><br>
+          ```python<br>
+          @app.post("/process")<br>
+          async def process_data(request: Request):<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;result = await heavy_computation()<br>
+          ```<br><br>
+          Please analyze this and suggest...<span class="fake-cursor"></span>
+        </div>
+        <div class="fake-widget">
+          <div class="fw-header">⚡ TokenWise</div>
+          <div class="fw-stat">
+            <span class="fw-key">TOKENS</span>
+            <span class="fw-val green">847</span>
+          </div>
+          <div class="fw-stat">
+            <span class="fw-key">GPT-4o COST</span>
+            <span class="fw-val" style="color:#74c99a">$0.004235</span>
+          </div>
+          <div class="fw-stat">
+            <span class="fw-key">CLAUDE OPUS</span>
+            <span class="fw-val" style="color:#d4a96a">$0.012705</span>
+          </div>
+          <div class="fw-stat">
+            <span class="fw-key">GEMINI FLASH</span>
+            <span class="fw-val" style="color:#7eb8f7">$0.000297</span>
+          </div>
+          <div class="fw-bar">
+            <div class="fw-bar-label"><span>Context</span><span class="green">23%</span></div>
+            <div class="fw-bar-track"><div class="fw-bar-fill"></div></div>
+          </div>
+          <div style="margin-top:12px;background:rgba(0,229,160,0.08);border:1px solid rgba(0,229,160,0.15);border-radius:8px;padding:8px 10px;font-size:11px;color:#00c96a;font-family:'DM Mono',monospace;">
+            💡 Switch to Gemini Flash → save $0.012
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-label">Features</div>
+  <div class="section-title">Everything you need to master your AI costs</div>
+  <div class="features-grid">
+    <div class="feat-card">
+      <div class="feat-icon">⚡</div>
+      <div class="feat-title">Real-time Token Counter</div>
+      <div class="feat-desc">See exact token counts as you type, inside any web app — ChatGPT, Claude, Gemini, Notion, Gmail, and more.</div>
+      <span class="feat-tag tag-free">FREE</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">💰</div>
+      <div class="feat-title">Live Cost Estimation</div>
+      <div class="feat-desc">See the exact dollar cost of your prompt across all major AI models simultaneously, before you hit send.</div>
+      <span class="feat-tag tag-free">FREE</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">⚠️</div>
+      <div class="feat-title">Context Window Alerts</div>
+      <div class="feat-desc">Get warned before you exceed a model's context limit. Never lose work or get truncated responses again.</div>
+      <span class="feat-tag tag-free">FREE</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">✨</div>
+      <div class="feat-title">AI Prompt Compression</div>
+      <div class="feat-desc">One-click AI analysis that finds redundancy in your prompts and suggests how to cut tokens without losing intent.</div>
+      <span class="feat-tag tag-pro">PRO</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">📊</div>
+      <div class="feat-title">Spend Dashboard</div>
+      <div class="feat-desc">Track every prompt you've sent, across all models, with daily/weekly/monthly breakdowns and trend charts.</div>
+      <span class="feat-tag tag-pro">PRO</span>
+    </div>
+    <div class="feat-card">
+      <div class="feat-icon">🏆</div>
+      <div class="feat-title">Model Comparison</div>
+      <div class="feat-desc">Side-by-side cost comparison for any prompt volume. Find the most efficient model for each of your use cases.</div>
+      <span class="feat-tag tag-pro">PRO</span>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="how-inner">
+    <div class="section-label">How it works</div>
+    <div class="section-title" style="margin-bottom:40px;">Up and running in 60 seconds</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-title">Install the extension</div>
+        <div class="step-desc">Add TokenWise to Chrome in one click from the Chrome Web Store. No configuration needed.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-title">Open any AI tool</div>
+        <div class="step-desc">Go to ChatGPT, Claude, Gemini, or any site where you write prompts. TokenWise activates automatically.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-title">Start typing</div>
+        <div class="step-desc">A small widget appears showing live token count, cost per model, and context usage as you write.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">04</div>
+        <div class="step-title">Save money</div>
+        <div class="step-desc">Use compression tips and model suggestions to cut your AI spend by up to 40% without losing quality.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="section-label">Pricing</div>
+  <div class="section-title">Simple, honest pricing</div>
+  <div class="pricing-grid">
+
+    <div class="price-card">
+      <div class="price-name">Free</div>
+      <div class="price-desc">For individuals getting started with AI cost awareness.</div>
+      <div class="price-amount">$0</div>
+      <div class="price-period">forever</div>
+      <div class="price-divider"></div>
+      <ul class="price-features">
+        <li>Real-time token counting</li>
+        <li>Basic cost estimation</li>
+        <li>Context window indicator</li>
+        <li>Works on ChatGPT & Claude</li>
+        <li>3 models compared</li>
+      </ul>
+      <button class="price-btn price-btn-outline" onclick="window.location='https://charming-paprenjak-a981d7.netlify.app/frontend/app.html'">Get started free</button>
+    </div>
+
+    <div class="price-card popular">
+      <div class="popular-badge">MOST POPULAR</div>
+      <div class="price-name">Pro</div>
+      <div class="price-desc">For power users who want full visibility and optimization.</div>
+      <div class="price-amount">$9<span style="font-size:22px;font-weight:500">.99</span></div>
+      <div class="price-period">per month, cancel anytime</div>
+      <div class="price-divider"></div>
+      <ul class="price-features">
+        <li>Everything in Free</li>
+        <li>AI prompt compression</li>
+        <li>Full spend dashboard</li>
+        <li>All models compared (7+)</li>
+        <li>Session history (unlimited)</li>
+        <li>Export reports (CSV)</li>
+        <li>Works on all websites</li>
+        <li>Priority support</li>
+      </ul>
+      <button class="price-btn price-btn-solid" onclick="window.location='https://charming-paprenjak-a981d7.netlify.app/frontend/app.html'">Start 7-day free trial →</button>
+    </div>
+
+    <div class="price-card">
+      <div class="price-name">Agency</div>
+      <div class="price-desc">For teams and agencies building AI workflows at scale.</div>
+      <div class="price-amount">$49</div>
+      <div class="price-period">per month, up to 10 seats</div>
+      <div class="price-divider"></div>
+      <ul class="price-features">
+        <li>Everything in Pro</li>
+        <li>Team spend dashboard</li>
+        <li>Per-seat usage tracking</li>
+        <li>White-label widget</li>
+        <li>API access</li>
+        <li>Slack alerts for budget limits</li>
+        <li>Dedicated account manager</li>
+      </ul>
+      <button class="price-btn price-btn-dark" onclick="window.location='mailto:usamabintariq582@gmail.com?subject=TokenWise Agency Plan'">Contact sales</button>
+    </div>
+
+  </div>
+  <p style="text-align:center;margin-top:28px;font-size:13px;color:var(--muted)">
+    All plans include a 7-day free trial. No credit card required to start.
+  </p>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials">
+  <div class="test-inner">
+    <div class="section-label">Testimonials</div>
+    <div class="section-title" style="margin-bottom:40px;">Trusted by AI power users</div>
+    <div class="test-grid">
+      <div class="test-card">
+        <div class="test-stars">★★★★★</div>
+        <div class="test-quote">"I had no idea I was wasting $80/month on bloated prompts. TokenWise helped me cut that in half within a week. The compression tips are genuinely smart."</div>
+        <div class="test-author">
+          <div class="test-avatar">👨‍💻</div>
+          <div><div class="test-name">Marcus T.</div><div class="test-role">Indie developer, SF</div></div>
+        </div>
+      </div>
+      <div class="test-card">
+        <div class="test-stars">★★★★★</div>
+        <div class="test-quote">"We run 50+ clients on AI workflows. TokenWise's agency dashboard finally gave us the visibility to know exactly where budget is going. Worth every cent."</div>
+        <div class="test-author">
+          <div class="test-avatar">👩‍💼</div>
+          <div><div class="test-name">Sarah K.</div><div class="test-role">Founder, AI Agency London</div></div>
+        </div>
+      </div>
+      <div class="test-card">
+        <div class="test-stars">★★★★★</div>
+        <div class="test-quote">"The real-time widget inside ChatGPT is like having a fuel gauge for AI. I use it every single day. Can't believe this wasn't built into ChatGPT from day one."</div>
+        <div class="test-author">
+          <div class="test-avatar">🧑‍🔬</div>
+          <div><div class="test-name">Priya R.</div><div class="test-role">Prompt engineer, Bangalore</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq" id="faq">
+  <div class="section-label">FAQ</div>
+  <div class="section-title">Common questions</div>
+
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">Does it read my prompts? <span class="icon">+</span></div>
+    <div class="faq-a">TokenWise counts tokens locally in your browser. Your prompt text never leaves your device for counting. The AI compression feature (Pro) sends your prompt to our server only when you explicitly click "Analyze" — you're always in control.</div>
+  </div>
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">Which AI tools does it work on? <span class="icon">+</span></div>
+    <div class="faq-a">Free plan: ChatGPT, Claude.ai, Gemini. Pro plan: all of the above plus Notion AI, Perplexity, Gmail, LinkedIn, and any custom site with a text input (via our universal mode).</div>
+  </div>
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">How accurate are the token counts? <span class="icon">+</span></div>
+    <div class="faq-a">Very accurate — within 1-3 tokens of the actual API count in most cases. We use a client-side tokenizer that closely mirrors each model's actual tokenization algorithm.</div>
+  </div>
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">Can I cancel anytime? <span class="icon">+</span></div>
+    <div class="faq-a">Yes, absolutely. Cancel from your dashboard at any time. You keep Pro access until the end of your billing period. No questions, no friction.</div>
+  </div>
+  <div class="faq-item" onclick="toggleFaq(this)">
+    <div class="faq-q">Is there a free trial for Pro? <span class="icon">+</span></div>
+    <div class="faq-a">Yes — 7 days free, no credit card required. You get full Pro access during the trial. We'll remind you 2 days before it ends.</div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2>Start saving on AI costs today</h2>
+  <p>Join 2,400+ developers and teams who finally know what their AI spending looks like.</p>
+  <a class="cta-btn" href="https://charming-paprenjak-a981d7.netlify.app/frontend/app.html">Get TokenWise Free →</a>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Token<em>Wise</em></div>
+  <div class="footer-links">
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+    <a href="#">Blog</a>
+    <a href="#">Support</a>
+    <a href="#">Twitter</a>
+  </div>
+  <div class="footer-copy">© 2026 TokenWise. All rights reserved.</div>
+</footer>
+
+<!-- AUTH MODAL -->
+<div class="modal-bg" id="modal-bg" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModalDirect()">✕</button>
+
+    <!-- SIGNUP -->
+    <div id="modal-signup">
+      <h2>Create your account</h2>
+      <p>Start your 7-day free Pro trial. No credit card needed.</p>
+      <button class="btn-google">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+        Continue with Google
+      </button>
+      <div class="modal-divider">or</div>
+      <div class="field"><label>Full name</label><input type="text" placeholder="Jane Smith"></div>
+      <div class="field"><label>Email</label><input type="email" placeholder="jane@example.com"></div>
+      <div class="field"><label>Password</label><input type="password" placeholder="Min 8 characters"></div>
+      <button class="modal-submit" onclick="handleAuth('signup')">Create account →</button>
+      <div class="modal-switch">Already have an account? <a onclick="switchModal('login')">Log in</a></div>
+    </div>
+
+    <!-- LOGIN -->
+    <div id="modal-login" style="display:none">
+      <h2>Welcome back</h2>
+      <p>Log in to your TokenWise account.</p>
+      <button class="btn-google">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+        Continue with Google
+      </button>
+      <div class="modal-divider">or</div>
+      <div class="field"><label>Email</label><input type="email" placeholder="jane@example.com"></div>
+      <div class="field"><label>Password</label><input type="password" placeholder="Your password"></div>
+      <button class="modal-submit" onclick="handleAuth('login')">Log in →</button>
+      <div class="modal-switch">Don't have an account? <a onclick="switchModal('signup')">Sign up free</a></div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="modal-success" style="display:none;text-align:center;padding:20px 0">
+      <div style="font-size:56px;margin-bottom:16px">🎉</div>
+      <h2 style="margin-bottom:8px">You're in!</h2>
+      <p style="margin-bottom:24px">Welcome to TokenWise. Your 7-day Pro trial is active.</p>
+      <a class="modal-submit" href="tokenwise.html" style="display:block;text-decoration:none;text-align:center;padding:13px">Open TokenWise App →</a>
+    </div>
+  </div>
+</div>
+
+<script>
+function openModal(type) {
+  // Redirect directly to the live app
+  window.location = 'https://charming-paprenjak-a981d7.netlify.app/frontend/app.html';
+}
+function closeModal(e) {
+  if (e.target === document.getElementById('modal-bg')) closeModalDirect();
+}
+function closeModalDirect() {
+  document.getElementById('modal-bg').classList.remove('open');
+}
+function switchModal(type) {
+  document.getElementById('modal-signup').style.display = type === 'signup' ? 'block' : 'none';
+  document.getElementById('modal-login').style.display = type === 'login' ? 'block' : 'none';
+  document.getElementById('modal-success').style.display = 'none';
+}
+function handleAuth(type) {
+  // Simulate auth — in production, connect to Supabase/Firebase/Auth0
+  document.getElementById('modal-signup').style.display = 'none';
+  document.getElementById('modal-login').style.display = 'none';
+  document.getElementById('modal-success').style.display = 'block';
+}
+function toggleFaq(el) {
+  el.classList.toggle('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDirect(); });
+</script>
+</body>
+</html>

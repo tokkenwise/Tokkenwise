@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TokenWise — AI Cost Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #111110;
+    --surface: #1a1a18;
+    --surface2: #222220;
+    --border: rgba(255,255,255,0.1);
+    --accent: #00d68f;
+    --accent2: #a78bfa;
+    --warn: #fb923c;
+    --text: #f0ede8;
+    --muted: #8a8880;
+    --claude: #e8b96a;
+    --gpt: #6dd4a0;
+    --gemini: #93c5fd;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Ambient background */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -40%;
+    left: -20%;
+    width: 80%;
+    height: 80%;
+    background: radial-gradient(ellipse, rgba(0,214,143,0.05) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: -30%;
+    right: -10%;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(ellipse, rgba(0,229,160,0.06) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* HEADER */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+    height: 60px;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-icon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+  }
+  .logo span { color: var(--accent); }
+
+  nav { display: flex; gap: 4px; }
+  nav button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 6px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  nav button.active, nav button:hover {
+    color: var(--text);
+    background: var(--surface2);
+  }
+  nav button.active { color: var(--accent); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: rgba(0,229,160,0.12);
+    color: var(--accent);
+    border: 1px solid rgba(0,229,160,0.25);
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  /* MAIN */
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 32px;
+  }
+
+  /* TABS */
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* ANALYZER TAB */
+  .analyzer-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.2px;
+  }
+  .panel-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .prompt-area {
+    width: 100%;
+    min-height: 220px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: vertical;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    padding: 20px 24px;
+    caret-color: var(--accent);
+  }
+  .prompt-area::placeholder { color: var(--muted); opacity: 0.5; }
+
+  .prompt-footer {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .token-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+  }
+  .token-pill .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .token-count {
+    font-weight: 500;
+    font-size: 15px;
+    color: var(--accent);
+    transition: all 0.2s;
+  }
+
+  /* Context bar */
+  .context-bar-wrap {
+    padding: 0 24px 16px;
+  }
+  .context-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-family: 'DM Mono', monospace;
+  }
+  .context-bar {
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .context-fill {
+    height: 100%;
+    border-radius: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.3s ease, background 0.3s;
+  }
+  .context-fill.warn { background: linear-gradient(90deg, var(--warn), #ff3366); }
+
+  /* Model selector */
+  .model-selector {
+    padding: 16px 24px;
+  }
+  .model-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+    font-family: 'DM Mono', monospace;
+  }
+  .model-tabs {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .model-tab {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .model-tab.active-claude { background: rgba(212,169,106,0.12); border-color: rgba(212,169,106,0.3); color: var(--claude); }
+  .model-tab.active-gpt { background: rgba(116,201,154,0.12); border-color: rgba(116,201,154,0.3); color: var(--gpt); }
+  .model-tab.active-gemini { background: rgba(126,184,247,0.12); border-color: rgba(126,184,247,0.3); color: var(--gemini); }
+
+  /* Right sidebar */
+  .sidebar { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Cost card */
+  .cost-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+  }
+  .cost-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 6px;
+  }
+  .cost-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    color: var(--accent);
+    transition: all 0.2s;
+  }
+  .cost-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .model-costs { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+  .model-cost-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .model-cost-name {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px;
+  }
+  .model-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .model-cost-price {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* Compression card */
+  .compress-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px;
+  }
+  .compress-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    background: rgba(124,106,255,0.15);
+    color: var(--accent2);
+    border: 1px solid rgba(124,106,255,0.3);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .tip { display: flex; gap: 10px; margin-bottom: 10px; align-items: flex-start; }
+  .tip-icon { font-size: 14px; margin-top: 1px; flex-shrink: 0; }
+  .tip-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
+  .tip-text strong { color: var(--text); }
+
+  .compress-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--accent2), #a855f7);
+    border: none;
+    color: white;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    margin-top: 12px;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+  .compress-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+  .compress-btn:active { transform: translateY(0); }
+
+  /* DASHBOARD */
+  .dashboard-header {
+    margin-bottom: 28px;
+  }
+  .dashboard-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 6px;
+  }
+  .dashboard-header p {
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+  .stat-card:nth-child(2)::after { background: linear-gradient(90deg, var(--accent2), transparent); }
+  .stat-card:nth-child(3)::after { background: linear-gradient(90deg, var(--warn), transparent); }
+  .stat-card:nth-child(4)::after { background: linear-gradient(90deg, var(--claude), transparent); }
+
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-family: 'DM Mono', monospace; margin-bottom: 8px; }
+  .stat-value { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -1px; }
+  .stat-change { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .stat-change.up { color: var(--accent); }
+  .stat-change.down { color: var(--warn); }
+
+  /* Chart */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .chart-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+  }
+  .chart-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .chart-legend {
+    display: flex; gap: 16px;
+  }
+  .legend-item {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace;
+  }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* SVG chart */
+  .bar-chart { width: 100%; }
+  .bar-group { cursor: pointer; }
+  .bar-group:hover rect { filter: brightness(1.2); }
+
+  /* Model breakdown */
+  .model-breakdown {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+  }
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-name { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .breakdown-right { text-align: right; }
+  .breakdown-cost { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
+  .breakdown-pct { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Recent sessions */
+  .sessions-table {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .sessions-header {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-family: 'DM Mono', monospace;
+  }
+  .session-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    align-items: center;
+    transition: background 0.1s;
+  }
+  .session-row:last-child { border-bottom: none; }
+  .session-row:hover { background: var(--surface2); }
+  .session-model {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .session-model.claude { background: rgba(212,169,106,0.12); color: var(--claude); }
+  .session-model.gpt { background: rgba(116,201,154,0.12); color: var(--gpt); }
+  .session-model.gemini { background: rgba(126,184,247,0.12); color: var(--gemini); }
+  .session-cost { font-family: 'DM Mono', monospace; font-weight: 500; }
+
+  /* COMPARE TAB */
+  .compare-header {
+    margin-bottom: 24px;
+  }
+  .compare-header h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 6px;
+  }
+  .model-compare-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .model-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+  }
+  .model-card:hover { transform: translateY(-2px); }
+  .model-card.claude-card { border-color: rgba(212,169,106,0.2); }
+  .model-card.gpt-card { border-color: rgba(116,201,154,0.2); }
+  .model-card.gemini-card { border-color: rgba(126,184,247,0.2); }
+  .model-card-bg {
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    opacity: 0.06;
+  }
+  .claude-card .model-card-bg { background: var(--claude); }
+  .gpt-card .model-card-bg { background: var(--gpt); }
+  .gemini-card .model-card-bg { background: var(--gemini); }
+
+  .model-card-name {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 4px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .model-card-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; }
+
+  .pricing-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .pricing-row:last-child { border-bottom: none; }
+  .pricing-key { color: var(--muted); }
+  .pricing-val { font-family: 'DM Mono', monospace; font-weight: 500; }
+
+  .context-size {
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--surface2);
+    border-radius: 10px;
+    font-size: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .context-size span { color: var(--muted); }
+  .context-size strong { font-family: 'DM Mono', monospace; }
+
+  /* Animated number */
+  @keyframes countUp {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-in { animation: countUp 0.2s ease; }
+
+  /* Warn state */
+  .warn-banner {
+    display: none;
+    background: rgba(255,107,53,0.1);
+    border: 1px solid rgba(255,107,53,0.25);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 12px;
+    color: var(--warn);
+    margin: 0 24px 16px;
+    align-items: center;
+    gap: 8px;
+  }
+  .warn-banner.show { display: flex; }
+
+  /* Empty states & util */
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .analyzer-grid { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2,1fr); }
+    .chart-grid { grid-template-columns: 1fr; }
+    .model-compare-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    Token<span>Wise</span>
+  </div>
+  <nav>
+    <button class="active" onclick="switchTab('analyzer', this)">Analyzer</button>
+    <button onclick="switchTab('dashboard', this)">Dashboard</button>
+    <button onclick="switchTab('compare', this)">Compare Models</button>
+  </nav>
+  <div class="header-right">
+    <div class="badge" id="live-badge">● LIVE</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ===== ANALYZER TAB ===== -->
+  <div id="tab-analyzer" class="tab-content active">
+    <div class="analyzer-grid">
+
+      <!-- Left: Prompt Editor -->
+      <div>
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">Prompt Analyzer</span>
+            <span class="panel-meta" id="char-count">0 characters</span>
+          </div>
+
+          <textarea
+            class="prompt-area"
+            id="promptInput"
+            placeholder="Paste or type your prompt here. TokenWise will count tokens and estimate costs in real time across Claude, GPT-4, and Gemini..."
+            oninput="analyzePrompt()"
+          ></textarea>
+
+          <div id="warn-banner" class="warn-banner">
+            ⚠️ <span id="warn-text"></span>
+          </div>
+
+          <div class="context-bar-wrap">
+            <div class="context-label">
+              <span>Context window usage</span>
+              <span id="context-pct">0%</span>
+            </div>
+            <div class="context-bar">
+              <div class="context-fill" id="context-fill" style="width:0%"></div>
+            </div>
+          </div>
+
+          <div class="prompt-footer">
+            <div class="token-pill">
+              <div class="dot"></div>
+              <span id="token-count" class="token-count">0</span>
+              <span style="color:var(--muted); font-size:12px">tokens</span>
+            </div>
+            <div class="token-pill">
+              <div class="dot" style="background:var(--accent2)"></div>
+              <span style="font-family:'DM Mono',monospace; font-size:13px; color:var(--accent2)" id="word-count">0</span>
+              <span style="color:var(--muted); font-size:12px">words</span>
+            </div>
+            <div class="token-pill">
+              <div class="dot" style="background:var(--claude)"></div>
+              <span style="font-family:'DM Mono',monospace; font-size:13px; color:var(--claude)" id="sentence-count">0</span>
+              <span style="color:var(--muted); font-size:12px">sentences</span>
+            </div>
+            <div style="margin-left:auto;">
+              <button onclick="clearPrompt()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 14px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Model selector -->
+        <div class="panel" style="margin-top:16px;">
+          <div class="model-selector">
+            <div class="model-label">Active Model (for context limit)</div>
+            <div class="model-tabs" id="modelTabs">
+              <button class="model-tab active-claude" onclick="selectModel('claude-3-opus', this)">Claude 3 Opus</button>
+              <button class="model-tab" onclick="selectModel('claude-3-sonnet', this)">Claude 3.5 Sonnet</button>
+              <button class="model-tab" onclick="selectModel('claude-3-haiku', this)">Claude 3 Haiku</button>
+              <button class="model-tab" onclick="selectModel('gpt-4o', this)">GPT-4o</button>
+              <button class="model-tab" onclick="selectModel('gpt-4-turbo', this)">GPT-4 Turbo</button>
+              <button class="model-tab" onclick="selectModel('gemini-1.5-pro', this)">Gemini 1.5 Pro</button>
+              <button class="model-tab" onclick="selectModel('gemini-flash', this)">Gemini Flash</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Sidebar -->
+      <div class="sidebar">
+
+        <!-- Cost card -->
+        <div class="cost-card">
+          <div class="cost-label">Estimated Cost (Input)</div>
+          <div class="cost-value" id="main-cost">$0.000000</div>
+          <div class="cost-sub" id="main-cost-sub">Based on current model pricing</div>
+
+          <div class="divider"></div>
+
+          <div class="model-costs">
+            <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px;">ALL MODELS COMPARISON</div>
+            <div class="model-cost-row">
+              <div class="model-cost-name">
+                <div class="model-dot" style="background:var(--claude)"></div>
+                Claude 3 Opus
+              </div>
+              <div class="model-cost-price" style="color:var(--claude)" id="cost-claude-opus">$0.000000</div>
+            </div>
+            <div class="model-cost-row">
+              <div class="model-cost-name">
+                <div class="model-dot" style="background:var(--claude); opacity:0.7"></div>
+                Claude 3.5 Sonnet
+              </div>
+              <div class="model-cost-price" style="color:var(--claude); opacity:0.8" id="cost-claude-sonnet">$0.000000</div>
+            </div>
+            <div class="model-cost-row">
+              <div class="model-cost-name">
+                <div class="model-dot" style="background:var(--gpt)"></div>
+                GPT-4o
+              </div>
+              <div class="model-cost-price" style="color:var(--gpt)" id="cost-gpt4o">$0.000000</div>
+            </div>
+            <div class="model-cost-row">
+              <div class="model-cost-name">
+                <div class="model-dot" style="background:var(--gemini)"></div>
+                Gemini 1.5 Pro
+              </div>
+              <div class="model-cost-price" style="color:var(--gemini)" id="cost-gemini-pro">$0.000000</div>
+            </div>
+            <div class="model-cost-row">
+              <div class="model-cost-name">
+                <div class="model-dot" style="background:var(--gemini); opacity:0.7"></div>
+                Gemini Flash
+              </div>
+              <div class="model-cost-price" style="color:var(--gemini); opacity:0.8" id="cost-gemini-flash">$0.000000</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Compression tips -->
+        <div class="compress-card">
+          <div class="compress-title">
+            Optimization Tips
+            <span class="chip">AI</span>
+          </div>
+          <div id="tips-container">
+            <div style="color:var(--muted);font-size:12px;padding:8px 0;">Type a prompt to get optimization suggestions.</div>
+          </div>
+          <button class="compress-btn" onclick="getAITips()">✨ Analyze & Compress Prompt</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD TAB ===== -->
+  <div id="tab-dashboard" class="tab-content">
+    <div class="dashboard-header">
+      <h1>Usage Dashboard</h1>
+      <p>Track your AI spending across all models — May 2026</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Total Tokens (Month)</div>
+        <div class="stat-value">2.4M</div>
+        <div class="stat-change up">↑ 18% vs last month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Estimated Spend</div>
+        <div class="stat-value">$47.23</div>
+        <div class="stat-change up">↑ $8.10 this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Avg Cost/Prompt</div>
+        <div class="stat-value">$0.019</div>
+        <div class="stat-change down">↑ 3% efficiency loss</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Prompts Analyzed</div>
+        <div class="stat-value">1,247</div>
+        <div class="stat-change up">↑ 312 this week</div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <!-- Bar chart -->
+      <div class="chart-area">
+        <div class="chart-title">
+          Daily Token Usage
+          <div class="chart-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:var(--claude)"></div>Claude</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--gpt)"></div>GPT-4</div>
+            <div class="legend-item"><div class="legend-dot" style="background:var(--gemini)"></div>Gemini</div>
+          </div>
+        </div>
+        <svg class="bar-chart" viewBox="0 0 560 180" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid lines -->
+          <line x1="0" y1="150" x2="560" y2="150" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <line x1="0" y1="110" x2="560" y2="110" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <line x1="0" y1="70" x2="560" y2="70" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+          <line x1="0" y1="30" x2="560" y2="30" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+
+          <!-- Labels -->
+          <text x="0" y="160" fill="rgba(255,255,255,0.25)" font-size="9" font-family="DM Mono">May 19</text>
+          <text x="78" y="160" fill="rgba(255,255,255,0.25)" font-size="9" font-family="DM Mono">May 20</text>
+          <text x="156" y="160" fill="rgba(255,255,255,0.25)" font-size="9" font-family="DM Mono">May 21</text>
+          <text x="234" y="160" fill="rgba(255,255,255,0.25)" font-size="9" font-family="DM Mono">May 22</text>
+          <text x="312" y="160" fill="rgba(255,255,255,0.25)" font-size="9" font-family="DM Mono">May 23</text>
+          <text x="390" y="160" fill="rgba(255,255,255,0.25)" font-size="9" font-family="DM Mono">May 24</text>
+          <text x="468" y="160" fill="rgba(255,255,255,0.25)" font-size="9" font-family="DM Mono">May 25</text>
+
+          <!-- Bars Day 1 -->
+          <g class="bar-group"><rect x="4" y="80" width="18" height="70" rx="3" fill="#d4a96a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="24" y="100" width="18" height="50" rx="3" fill="#74c99a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="44" y="115" width="18" height="35" rx="3" fill="#7eb8f7" opacity="0.85"/></g>
+          <!-- Day 2 -->
+          <g class="bar-group"><rect x="82" y="65" width="18" height="85" rx="3" fill="#d4a96a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="102" y="90" width="18" height="60" rx="3" fill="#74c99a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="122" y="110" width="18" height="40" rx="3" fill="#7eb8f7" opacity="0.85"/></g>
+          <!-- Day 3 -->
+          <g class="bar-group"><rect x="160" y="55" width="18" height="95" rx="3" fill="#d4a96a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="180" y="85" width="18" height="65" rx="3" fill="#74c99a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="200" y="105" width="18" height="45" rx="3" fill="#7eb8f7" opacity="0.85"/></g>
+          <!-- Day 4 -->
+          <g class="bar-group"><rect x="238" y="40" width="18" height="110" rx="3" fill="#d4a96a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="258" y="75" width="18" height="75" rx="3" fill="#74c99a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="278" y="100" width="18" height="50" rx="3" fill="#7eb8f7" opacity="0.85"/></g>
+          <!-- Day 5 -->
+          <g class="bar-group"><rect x="316" y="70" width="18" height="80" rx="3" fill="#d4a96a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="336" y="95" width="18" height="55" rx="3" fill="#74c99a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="356" y="120" width="18" height="30" rx="3" fill="#7eb8f7" opacity="0.85"/></g>
+          <!-- Day 6 -->
+          <g class="bar-group"><rect x="394" y="50" width="18" height="100" rx="3" fill="#d4a96a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="414" y="80" width="18" height="70" rx="3" fill="#74c99a" opacity="0.85"/></g>
+          <g class="bar-group"><rect x="434" y="108" width="18" height="42" rx="3" fill="#7eb8f7" opacity="0.85"/></g>
+          <!-- Day 7 (Today) -->
+          <g class="bar-group"><rect x="472" y="35" width="18" height="115" rx="3" fill="#d4a96a"/></g>
+          <g class="bar-group"><rect x="492" y="60" width="18" height="90" rx="3" fill="#74c99a"/></g>
+          <g class="bar-group"><rect x="512" y="88" width="18" height="62" rx="3" fill="#7eb8f7"/></g>
+          <!-- Today indicator -->
+          <text x="490" y="18" fill="rgba(0,229,160,0.6)" font-size="9" font-family="DM Mono" text-anchor="middle">TODAY</text>
+          <line x1="490" y1="20" x2="490" y2="148" stroke="rgba(0,229,160,0.2)" stroke-width="1" stroke-dasharray="3,3"/>
+        </svg>
+      </div>
+
+      <!-- Model breakdown -->
+      <div class="model-breakdown">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:16px;">Model Breakdown</div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">
+            <div class="model-dot" style="background:var(--claude);width:10px;height:10px;"></div>
+            Claude
+          </div>
+          <div class="breakdown-right">
+            <div class="breakdown-cost" style="color:var(--claude)">$28.14</div>
+            <div class="breakdown-pct">59.6%</div>
+          </div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">
+            <div class="model-dot" style="background:var(--gpt);width:10px;height:10px;"></div>
+            GPT-4o
+          </div>
+          <div class="breakdown-right">
+            <div class="breakdown-cost" style="color:var(--gpt)">$13.47</div>
+            <div class="breakdown-pct">28.5%</div>
+          </div>
+        </div>
+        <div class="breakdown-row">
+          <div class="breakdown-name">
+            <div class="model-dot" style="background:var(--gemini);width:10px;height:10px;"></div>
+            Gemini
+          </div>
+          <div class="breakdown-right">
+            <div class="breakdown-cost" style="color:var(--gemini)">$5.62</div>
+            <div class="breakdown-pct">11.9%</div>
+          </div>
+        </div>
+        <div style="margin-top:16px;padding:12px;background:var(--surface2);border-radius:10px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;font-family:'DM Mono',monospace;">SAVINGS POTENTIAL</div>
+          <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:var(--accent)">$14.20</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:3px;">if switched to Haiku/Flash for simple tasks</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Sessions -->
+    <div class="sessions-table">
+      <div class="panel-header" style="padding:16px 20px;">
+        <span class="panel-title">Recent Sessions</span>
+        <span class="panel-meta">Last 10 prompts analyzed</span>
+      </div>
+      <div class="sessions-header">
+        <span>Prompt Preview</span>
+        <span>Model</span>
+        <span>Tokens</span>
+        <span>Cost</span>
+        <span>Time</span>
+      </div>
+      <div id="sessions-list">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== COMPARE TAB ===== -->
+  <div id="tab-compare" class="tab-content">
+    <div class="compare-header">
+      <h2>Model Pricing Comparison</h2>
+      <p style="color:var(--muted);font-size:13px;">Current pricing per 1M tokens (input / output) — as of May 2026</p>
+    </div>
+
+    <div class="model-compare-grid">
+      <!-- Claude -->
+      <div class="model-card claude-card">
+        <div class="model-card-bg"></div>
+        <div class="model-card-name" style="color:var(--claude)">
+          🔶 Claude
+        </div>
+        <div class="model-card-sub">Anthropic — Best for reasoning & long context</div>
+
+        <div class="pricing-row"><span class="pricing-key">Claude 3 Opus</span><span class="pricing-val" style="color:var(--claude)">$15 / $75</span></div>
+        <div class="pricing-row"><span class="pricing-key">Claude 3.5 Sonnet</span><span class="pricing-val" style="color:var(--claude)">$3 / $15</span></div>
+        <div class="pricing-row"><span class="pricing-key">Claude 3 Haiku</span><span class="pricing-val" style="color:var(--claude)">$0.25 / $1.25</span></div>
+
+        <div class="context-size">
+          <span>Context Window</span>
+          <strong>200K tokens</strong>
+        </div>
+      </div>
+
+      <!-- GPT-4 -->
+      <div class="model-card gpt-card">
+        <div class="model-card-bg"></div>
+        <div class="model-card-name" style="color:var(--gpt)">
+          🟢 OpenAI GPT
+        </div>
+        <div class="model-card-sub">OpenAI — Widest ecosystem & tooling</div>
+
+        <div class="pricing-row"><span class="pricing-key">GPT-4o</span><span class="pricing-val" style="color:var(--gpt)">$5 / $15</span></div>
+        <div class="pricing-row"><span class="pricing-key">GPT-4 Turbo</span><span class="pricing-val" style="color:var(--gpt)">$10 / $30</span></div>
+        <div class="pricing-row"><span class="pricing-key">GPT-3.5 Turbo</span><span class="pricing-val" style="color:var(--gpt)">$0.50 / $1.50</span></div>
+
+        <div class="context-size">
+          <span>Context Window</span>
+          <strong>128K tokens</strong>
+        </div>
+      </div>
+
+      <!-- Gemini -->
+      <div class="model-card gemini-card">
+        <div class="model-card-bg"></div>
+        <div class="model-card-name" style="color:var(--gemini)">
+          🔵 Gemini
+        </div>
+        <div class="model-card-sub">Google — Massive context, multimodal</div>
+
+        <div class="pricing-row"><span class="pricing-key">Gemini 1.5 Pro</span><span class="pricing-val" style="color:var(--gemini)">$3.50 / $10.50</span></div>
+        <div class="pricing-row"><span class="pricing-key">Gemini 1.5 Flash</span><span class="pricing-val" style="color:var(--gemini)">$0.35 / $1.05</span></div>
+        <div class="pricing-row"><span class="pricing-key">Gemini 2.0 Flash</span><span class="pricing-val" style="color:var(--gemini)">$0.10 / $0.40</span></div>
+
+        <div class="context-size">
+          <span>Context Window</span>
+          <strong>1M tokens</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cost calculator -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Volume Cost Calculator</span>
+        <span class="panel-meta">Estimate monthly spend</span>
+      </div>
+      <div style="padding:24px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-bottom:24px;">
+          <div>
+            <div class="model-label">Prompts per day</div>
+            <input type="number" id="calc-prompts" value="100" min="1"
+              oninput="calcVolume()"
+              style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-family:'DM Mono',monospace;font-size:15px;outline:none;">
+          </div>
+          <div>
+            <div class="model-label">Avg tokens per prompt</div>
+            <input type="number" id="calc-tokens" value="500" min="1"
+              oninput="calcVolume()"
+              style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-family:'DM Mono',monospace;font-size:15px;outline:none;">
+          </div>
+          <div>
+            <div class="model-label">Avg response tokens</div>
+            <input type="number" id="calc-response" value="800" min="1"
+              oninput="calcVolume()"
+              style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-family:'DM Mono',monospace;font-size:15px;outline:none;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;" id="calc-results">
+          <!-- populated by JS -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ============ DATA ============
+const MODELS = {
+  'claude-3-opus':    { name: 'Claude 3 Opus',       context: 200000, inputPer1M: 15,    outputPer1M: 75,   color: '#d4a96a', family: 'claude' },
+  'claude-3-sonnet':  { name: 'Claude 3.5 Sonnet',   context: 200000, inputPer1M: 3,     outputPer1M: 15,   color: '#d4a96a', family: 'claude' },
+  'claude-3-haiku':   { name: 'Claude 3 Haiku',      context: 200000, inputPer1M: 0.25,  outputPer1M: 1.25, color: '#d4a96a', family: 'claude' },
+  'gpt-4o':           { name: 'GPT-4o',              context: 128000, inputPer1M: 5,     outputPer1M: 15,   color: '#74c99a', family: 'gpt' },
+  'gpt-4-turbo':      { name: 'GPT-4 Turbo',         context: 128000, inputPer1M: 10,    outputPer1M: 30,   color: '#74c99a', family: 'gpt' },
+  'gemini-1.5-pro':   { name: 'Gemini 1.5 Pro',      context: 1000000,inputPer1M: 3.5,   outputPer1M: 10.5, color: '#7eb8f7', family: 'gemini' },
+  'gemini-flash':     { name: 'Gemini Flash',         context: 1000000,inputPer1M: 0.35,  outputPer1M: 1.05, color: '#7eb8f7', family: 'gemini' },
+};
+
+let activeModel = 'claude-3-opus';
+let currentTokens = 0;
+
+// Token estimation (approx 4 chars/token or 0.75 words/token)
+function estimateTokens(text) {
+  if (!text) return 0;
+  const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+  return Math.ceil(words / 0.75);
+}
+
+function calcCost(tokens, pricePerMillion) {
+  return (tokens / 1000000) * pricePerMillion;
+}
+
+function formatCost(cost) {
+  if (cost < 0.000001) return '$0.000000';
+  if (cost < 0.01) return '$' + cost.toFixed(6);
+  if (cost < 1) return '$' + cost.toFixed(4);
+  return '$' + cost.toFixed(2);
+}
+
+// ============ ANALYZER ============
+function analyzePrompt() {
+  const text = document.getElementById('promptInput').value;
+  const tokens = estimateTokens(text);
+  const words = text.trim().split(/\s+/).filter(w=>w.length>0).length;
+  const sentences = text.split(/[.!?]+/).filter(s=>s.trim().length>0).length;
+  const chars = text.length;
+
+  currentTokens = tokens;
+
+  document.getElementById('token-count').textContent = tokens.toLocaleString();
+  document.getElementById('word-count').textContent = words.toLocaleString();
+  document.getElementById('sentence-count').textContent = sentences;
+  document.getElementById('char-count').textContent = chars.toLocaleString() + ' characters';
+
+  // Context bar
+  const model = MODELS[activeModel];
+  const pct = Math.min(100, (tokens / model.context) * 100);
+  const fill = document.getElementById('context-fill');
+  const pctEl = document.getElementById('context-pct');
+  fill.style.width = pct + '%';
+  pctEl.textContent = pct.toFixed(1) + '%';
+
+  if (pct > 80) {
+    fill.classList.add('warn');
+  } else {
+    fill.classList.remove('warn');
+  }
+
+  // Warn banner
+  const banner = document.getElementById('warn-banner');
+  const warnText = document.getElementById('warn-text');
+  if (pct > 90) {
+    banner.classList.add('show');
+    warnText.textContent = `⚠ You're at ${pct.toFixed(0)}% of the context window for ${model.name}. Consider trimming your prompt.`;
+  } else if (pct > 70) {
+    banner.classList.add('show');
+    warnText.textContent = `You're at ${pct.toFixed(0)}% of the ${model.name} context limit (${model.context.toLocaleString()} tokens).`;
+  } else {
+    banner.classList.remove('show');
+  }
+
+  // Costs
+  const mainCost = calcCost(tokens, model.inputPer1M);
+  document.getElementById('main-cost').textContent = formatCost(mainCost);
+  document.getElementById('main-cost-sub').textContent = `${tokens.toLocaleString()} tokens × ${model.name}`;
+
+  document.getElementById('cost-claude-opus').textContent = formatCost(calcCost(tokens, 15));
+  document.getElementById('cost-claude-sonnet').textContent = formatCost(calcCost(tokens, 3));
+  document.getElementById('cost-gpt4o').textContent = formatCost(calcCost(tokens, 5));
+  document.getElementById('cost-gemini-pro').textContent = formatCost(calcCost(tokens, 3.5));
+  document.getElementById('cost-gemini-flash').textContent = formatCost(calcCost(tokens, 0.35));
+
+  // Tips
+  updateTips(text, tokens);
+
+  // Add to session log
+  if (tokens > 10) logSession(text, tokens);
+}
+
+function updateTips(text, tokens) {
+  const container = document.getElementById('tips-container');
+  if (tokens < 5) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">Type a prompt to get optimization suggestions.</div>';
+    return;
+  }
+
+  const tips = [];
+
+  if (text.match(/\b(please|kindly|could you|would you mind)\b/gi)) {
+    tips.push({ icon: '✂️', text: '<strong>Remove filler words</strong> like "please", "kindly", "could you" — they add tokens without adding meaning.' });
+  }
+  if (text.length > 500 && text.match(/\n{2,}/)) {
+    tips.push({ icon: '📝', text: '<strong>Reduce blank lines</strong> — extra whitespace adds token overhead in longer prompts.' });
+  }
+  if (tokens > 1000) {
+    tips.push({ icon: '⚡', text: '<strong>Consider Claude Haiku or Gemini Flash</strong> — for this prompt length, you\'d save ' + formatCost(calcCost(tokens, 15) - calcCost(tokens, 0.25)) + ' vs Opus.' });
+  }
+  if (text.match(/\b(very|really|extremely|absolutely|literally)\b/gi)) {
+    tips.push({ icon: '🎯', text: '<strong>Remove intensifiers</strong> — words like "very", "really", "extremely" rarely affect model output quality.' });
+  }
+  if (tokens > 200) {
+    const saved = Math.ceil(tokens * 0.15);
+    tips.push({ icon: '💡', text: `<strong>Estimated compression potential:</strong> ~${saved} tokens (15%) by removing redundancy.` });
+  }
+
+  if (tips.length === 0) {
+    tips.push({ icon: '✅', text: '<strong>Your prompt looks efficient!</strong> No obvious optimization targets found.' });
+  }
+
+  container.innerHTML = tips.map(t => `
+    <div class="tip">
+      <span class="tip-icon">${t.icon}</span>
+      <span class="tip-text">${t.text}</span>
+    </div>
+  `).join('');
+}
+
+function selectModel(modelKey, btn) {
+  activeModel = modelKey;
+  const model = MODELS[modelKey];
+
+  document.querySelectorAll('.model-tab').forEach(t => {
+    t.className = 'model-tab';
+  });
+  btn.classList.add('active-' + model.family);
+
+  analyzePrompt();
+}
+
+function clearPrompt() {
+  document.getElementById('promptInput').value = '';
+  analyzePrompt();
+}
+
+// ============ AI TIPS (Claude API) ============
+async function getAITips() {
+  const text = document.getElementById('promptInput').value;
+  if (!text.trim()) {
+    alert('Please type a prompt first.');
+    return;
+  }
+
+  const btn = document.querySelector('.compress-btn');
+  btn.textContent = '⏳ Analyzing...';
+  btn.disabled = true;
+
+  const container = document.getElementById('tips-container');
+  container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0;">AI analyzing your prompt...</div>';
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 1000,
+        messages: [{
+          role: "user",
+          content: `You are a prompt optimization expert. Analyze this prompt and provide 3-4 specific, actionable tips to reduce token count while preserving intent. For each tip, also show a before/after example if relevant. Keep each tip concise (1-2 sentences). Format as JSON array: [{"icon":"emoji","tip":"text","saving":"estimated token reduction"}]
+
+Prompt to analyze:
+"""
+${text}
+"""
+
+Return ONLY valid JSON, no markdown, no explanation.`
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const raw = data.content.map(c => c.text || '').join('');
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const tips = JSON.parse(clean);
+
+    container.innerHTML = tips.map(t => `
+      <div class="tip">
+        <span class="tip-icon">${t.icon}</span>
+        <div class="tip-text">
+          <strong>${t.tip}</strong>
+          ${t.saving ? `<span style="color:var(--accent);display:block;margin-top:2px;">~${t.saving}</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+
+  } catch(e) {
+    container.innerHTML = '<div style="color:var(--warn);font-size:12px;">Could not fetch AI tips. Check connection.</div>';
+  }
+
+  btn.textContent = '✨ Analyze & Compress Prompt';
+  btn.disabled = false;
+}
+
+// ============ SESSIONS ============
+const sessionData = [
+  { prompt: 'Write a detailed market analysis report for a SaaS company targeting enterprise clients in the healthcare sector...', model: 'claude', tokens: 847, cost: 0.0000127, time: '2 min ago' },
+  { prompt: 'Summarize the key points from this quarterly earnings call transcript and highlight growth metrics...', model: 'gpt', tokens: 612, cost: 0.0000031, time: '15 min ago' },
+  { prompt: 'You are an expert Python developer. Debug this async function and explain why the race condition occurs...', model: 'claude', tokens: 423, cost: 0.0000063, time: '32 min ago' },
+  { prompt: 'Generate 10 creative marketing taglines for a fintech app targeting Gen Z users who...', model: 'gemini', tokens: 289, cost: 0.0000010, time: '1 hr ago' },
+  { prompt: 'Translate this legal contract clause from English to French, preserving all technical terminology...', model: 'gpt', tokens: 756, cost: 0.0000038, time: '2 hrs ago' },
+  { prompt: 'Analyze the sentiment of these 50 customer reviews and categorize them by topic cluster...', model: 'gemini', tokens: 1834, cost: 0.0000064, time: '3 hrs ago' },
+  { prompt: 'Create a comprehensive study guide for the AWS Solutions Architect certification covering...', model: 'claude', tokens: 312, cost: 0.0000047, time: '5 hrs ago' },
+];
+
+function renderSessions(data) {
+  const list = document.getElementById('sessions-list');
+  list.innerHTML = data.map(s => `
+    <div class="session-row">
+      <span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:300px;">${s.prompt.substring(0, 60)}...</span>
+      <span><span class="session-model ${s.model}">${s.model === 'claude' ? '🔶 Claude' : s.model === 'gpt' ? '🟢 GPT-4' : '🔵 Gemini'}</span></span>
+      <span style="font-family:'DM Mono',monospace;font-size:13px;">${s.tokens.toLocaleString()}</span>
+      <span class="session-cost">${formatCost(s.cost)}</span>
+      <span style="color:var(--muted);font-size:12px;">${s.time}</span>
+    </div>
+  `).join('');
+}
+
+function logSession(text, tokens) {
+  // Just update the count display — in production this would persist
+}
+
+// ============ VOLUME CALCULATOR ============
+const calcModels = [
+  { key: 'claude-opus',   name: 'Claude Opus',  input: 15,   output: 75,   color: '#d4a96a' },
+  { key: 'claude-sonnet', name: 'C. Sonnet',    input: 3,    output: 15,   color: '#d4a96a' },
+  { key: 'claude-haiku',  name: 'C. Haiku',     input: 0.25, output: 1.25, color: '#d4a96a' },
+  { key: 'gpt4o',         name: 'GPT-4o',       input: 5,    output: 15,   color: '#74c99a' },
+  { key: 'gemini-flash',  name: 'Gemini Flash', input: 0.35, output: 1.05, color: '#7eb8f7' },
+];
+
+function calcVolume() {
+  const prompts = parseInt(document.getElementById('calc-prompts').value) || 0;
+  const inTokens = parseInt(document.getElementById('calc-tokens').value) || 0;
+  const outTokens = parseInt(document.getElementById('calc-response').value) || 0;
+
+  const monthlyPrompts = prompts * 30;
+  const totalIn = monthlyPrompts * inTokens;
+  const totalOut = monthlyPrompts * outTokens;
+
+  const container = document.getElementById('calc-results');
+  container.innerHTML = calcModels.map(m => {
+    const monthly = calcCost(totalIn, m.input) + calcCost(totalOut, m.output);
+    return `
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;text-align:center;">
+        <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:8px;">${m.name}</div>
+        <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;color:${m.color};">
+          ${monthly < 1 ? '$' + monthly.toFixed(2) : '$' + monthly.toFixed(0)}
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:4px;">/month</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============ TAB SWITCHING ============
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ============ INIT ============
+renderSessions(sessionData);
+calcVolume();
+</script>
+</body>
+</html>

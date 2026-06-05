@@ -1,0 +1,50 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self' https://eojugvrsovcheebdtwfc.supabase.co https://fonts.googleapis.com https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://js.sentry-cdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; connect-src 'self' https://eojugvrsovcheebdtwfc.supabase.co https://charming-paprenjak-a981d7.netlify.app https://api.anthropic.com https://ingest.sentry.io;"
+
+[[headers]]
+  for = "/.netlify/functions/*"
+  [headers.values]
+    Access-Control-Allow-Methods = "GET, POST, PATCH, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type, Authorization"
+
+[[redirects]]
+  from = "/"
+  to = "/frontend/tokenwise-landing.html"
+  status = 200
+
+[[redirects]]
+  from = "/app"
+  to = "/frontend/app.html"
+  status = 200
+
+[[redirects]]
+  from = "/teams"
+  to = "/frontend/team-dashboard.html"
+  status = 200
+
+[[redirects]]
+  from = "/privacy"
+  to = "/frontend/privacy.html"
+  status = 200
+
+[[redirects]]
+  from = "/terms"
+  to = "/frontend/terms.html"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/frontend/404.html"
+  status = 404

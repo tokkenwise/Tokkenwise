@@ -1,0 +1,1948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TokenWise App</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<!-- Real BPE tokenizer (GPT-compatible, ~95% accurate for all models) -->
+<script src="https://cdn.jsdelivr.net/npm/gpt-tokenizer/dist/cl100k_base.js"></script>
+<style>
+/* ── LIGHT MODE (default) ─────────────────────── */
+:root {
+  --bg:#f5f5f2; --surface:#ffffff; --surface2:#f0f0ed;
+  --border:rgba(0,0,0,0.08); --accent:#00a572; --accent2:#6d55e8;
+  --warn:#e05a1a; --text:#1a1a1a; --muted:#888880;
+  --claude:#b8832a; --gpt:#2a9a6a; --gemini:#2a72c8;
+  --header-bg:rgba(245,245,242,0.95); --shadow:0 1px 4px rgba(0,0,0,0.08);
+}
+body.dark {
+  --bg:#111110; --surface:#1a1a18; --surface2:#222220;
+  --border:rgba(255,255,255,0.1); --accent:#00d68f; --accent2:#a78bfa;
+  --warn:#fb923c; --text:#f0ede8; --muted:#8a8880;
+  --claude:#e8b96a; --gpt:#6dd4a0; --gemini:#93c5fd;
+  --header-bg:rgba(17,17,16,0.95); --shadow:0 1px 4px rgba(0,0,0,0.3);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;transition:background .2s,color .2s}
+
+/* THEME TOGGLE */
+.theme-toggle{width:34px;height:34px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .2s}
+.theme-toggle:hover{transform:scale(1.08)}
+
+/* LOADING */
+#loading-screen{position:fixed;inset:0;z-index:300;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.loading-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:28px;letter-spacing:-1px;color:var(--accent)}
+.loading-spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* AUTH */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;position:relative;z-index:1}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:48px 40px;width:100%;max-width:420px;box-shadow:0 4px 24px rgba(0,0,0,0.08)}
+.auth-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;letter-spacing:-0.5px;margin-bottom:32px;display:flex;align-items:center;gap:10px}
+.auth-logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.auth-logo em{color:var(--accent);font-style:normal}
+.auth-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px}
+.auth-sub{font-size:14px;color:var(--muted);margin-bottom:28px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;letter-spacing:0.5px;text-transform:uppercase}
+.field input{width:100%;padding:12px 16px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--accent)}
+.btn-auth{width:100%;padding:13px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:15px;cursor:pointer;transition:opacity .15s,transform .1s;margin-top:4px}
+.btn-auth:hover{opacity:.92;transform:translateY(-1px)}
+.btn-google{width:100%;padding:12px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:border-color .15s;margin-bottom:16px}
+.btn-google:hover{border-color:var(--muted)}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--muted);font-size:12px}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.auth-switch{text-align:center;font-size:13px;color:var(--muted);margin-top:20px}
+.auth-switch a{color:var(--accent);cursor:pointer;font-weight:600}
+.auth-error{background:rgba(224,90,26,0.1);border:1px solid rgba(224,90,26,0.25);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--warn);margin-bottom:16px;display:none}
+
+/* MAIN APP */
+#app-screen{display:none;min-height:100vh}
+header{position:sticky;top:0;z-index:100;background:var(--header-bg);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 32px;height:60px;box-shadow:var(--shadow)}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px}
+.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.logo em{color:var(--accent);font-style:normal}
+nav{display:flex;gap:4px}
+nav button{background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;padding:6px 14px;border-radius:8px;cursor:pointer;transition:all .15s}
+nav button.active,nav button:hover{color:var(--text);background:var(--surface2)}
+nav button.active{color:var(--accent)}
+.header-right{display:flex;align-items:center;gap:10px}
+.plan-badge{font-family:'DM Mono',monospace;font-size:11px;padding:3px 10px;border-radius:20px}
+.badge-free{background:rgba(107,107,128,0.12);color:var(--muted);border:1px solid var(--border)}
+.badge-pro{background:rgba(0,165,114,0.12);color:var(--accent);border:1px solid rgba(0,165,114,0.3)}
+.badge-agency{background:rgba(109,85,232,0.12);color:var(--accent2);border:1px solid rgba(109,85,232,0.3)}
+.user-btn{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:5px 14px 5px 6px;cursor:pointer;font-size:13px;transition:border-color .15s}
+.user-btn:hover{border-color:var(--muted)}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white}
+
+/* UPGRADE BANNER */
+#upgrade-banner{background:linear-gradient(135deg,rgba(109,85,232,0.08),rgba(0,165,114,0.06));border-bottom:1px solid rgba(109,85,232,0.15);padding:10px 32px;display:none;align-items:center;justify-content:space-between;font-size:13px}
+#upgrade-banner.show{display:flex}
+.upgrade-text em{color:var(--accent2);font-style:normal;font-weight:600}
+.btn-upgrade{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;border:none;padding:7px 18px;border-radius:8px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:opacity .15s,transform .1s;white-space:nowrap}
+.btn-upgrade:hover{opacity:.9;transform:translateY(-1px)}
+
+/* TABS */
+main{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:32px 32px}
+.tab-content{display:none}
+.tab-content.active{display:block}
+
+/* ANALYZER */
+.analyzer-grid{display:grid;grid-template-columns:1fr 340px;gap:20px}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+.panel-header{padding:16px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px}
+.panel-meta{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)}
+.prompt-area{width:100%;min-height:220px;background:transparent;border:none;outline:none;resize:vertical;color:var(--text);font-family:'DM Mono',monospace;font-size:13.5px;line-height:1.7;padding:20px 24px;caret-color:var(--accent)}
+.prompt-area::placeholder{color:var(--muted);opacity:.5}
+.prompt-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.token-pill{display:flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:12px}
+.token-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+.token-count{font-weight:500;font-size:15px;color:var(--accent)}
+.accuracy-badge{font-size:10px;background:rgba(0,165,114,0.1);color:var(--accent);border:1px solid rgba(0,165,114,0.2);padding:2px 8px;border-radius:20px;font-family:'DM Mono',monospace}
+.context-bar-wrap{padding:0 24px 16px}
+.context-label{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px;font-family:'DM Mono',monospace}
+.context-bar{height:4px;background:var(--surface2);border-radius:4px;overflow:hidden}
+.context-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s ease,background .3s}
+.context-fill.warn{background:linear-gradient(90deg,var(--warn),#ff3366)}
+.model-selector{padding:16px 24px}
+.model-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;font-family:'DM Mono',monospace}
+.model-tabs{display:flex;gap:6px;flex-wrap:wrap}
+.model-tab{background:var(--surface2);border:1px solid var(--border);color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;padding:5px 12px;border-radius:20px;cursor:pointer;transition:all .15s}
+.model-tab.active-claude{background:rgba(184,131,42,0.1);border-color:rgba(184,131,42,0.3);color:var(--claude)}
+.model-tab.active-gpt{background:rgba(42,154,106,0.1);border-color:rgba(42,154,106,0.3);color:var(--gpt)}
+.model-tab.active-gemini{background:rgba(42,114,200,0.1);border-color:rgba(42,114,200,0.3);color:var(--gemini)}
+.sidebar{display:flex;flex-direction:column;gap:16px}
+.cost-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;box-shadow:var(--shadow)}
+.cost-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;margin-bottom:6px}
+.cost-value{font-family:'Syne',sans-serif;font-size:36px;font-weight:800;letter-spacing:-1.5px;color:var(--accent)}
+.cost-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.model-costs{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.model-cost-row{display:flex;align-items:center;justify-content:space-between}
+.model-cost-name{display:flex;align-items:center;gap:8px;font-size:13px}
+.model-dot{width:8px;height:8px;border-radius:50%}
+.model-cost-price{font-family:'DM Mono',monospace;font-size:13px;font-weight:500}
+.compress-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+.compress-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.chip{font-family:'DM Mono',monospace;font-size:10px;background:rgba(109,85,232,0.12);color:var(--accent2);border:1px solid rgba(109,85,232,0.25);padding:2px 8px;border-radius:20px}
+.tip{display:flex;gap:10px;margin-bottom:10px;align-items:flex-start}
+.tip-icon{font-size:14px;margin-top:1px;flex-shrink:0}
+.tip-text{font-size:12px;color:var(--muted);line-height:1.5}
+.tip-text strong{color:var(--text)}
+.compress-btn{width:100%;background:linear-gradient(135deg,var(--accent2),#a855f7);border:none;color:white;font-family:'DM Sans',sans-serif;font-weight:500;font-size:13px;padding:10px;border-radius:10px;cursor:pointer;margin-top:12px;transition:opacity .15s,transform .1s}
+.compress-btn:hover{opacity:.9;transform:translateY(-1px)}
+.compress-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.warn-banner{display:none;background:rgba(224,90,26,0.08);border:1px solid rgba(224,90,26,0.2);border-radius:10px;padding:10px 16px;font-size:12px;color:var(--warn);margin:0 24px 16px;align-items:center;gap:8px}
+.warn-banner.show{display:flex}
+.divider{height:1px;background:var(--border);margin:16px 0}
+
+/* DASHBOARD */
+.dashboard-header{margin-bottom:24px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.dashboard-header h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-1px;margin-bottom:4px}
+.dashboard-header p{color:var(--muted);font-size:14px}
+.dash-actions{display:flex;gap:8px}
+.btn-export{background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.btn-export:hover{border-color:var(--accent);color:var(--accent)}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+.stat-card:nth-child(2)::after{background:linear-gradient(90deg,var(--accent2),transparent)}
+.stat-card:nth-child(3)::after{background:linear-gradient(90deg,var(--warn),transparent)}
+.stat-card:nth-child(4)::after{background:linear-gradient(90deg,var(--claude),transparent)}
+.stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;margin-bottom:8px}
+.stat-value{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:-1px}
+.stat-change{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* CHART */
+.chart-grid{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:24px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+.chart-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.chart-legend{display:flex;gap:12px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+.legend-dot{width:8px;height:8px;border-radius:50%}
+canvas{width:100%!important}
+.model-breakdown-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
+.model-breakdown-row:last-child{border:none}
+.breakdown-name{display:flex;align-items:center;gap:8px;font-size:13px}
+.breakdown-right{text-align:right}
+.breakdown-cost{font-family:'DM Mono',monospace;font-size:14px;font-weight:600}
+.breakdown-pct{font-size:11px;color:var(--muted)}
+
+/* SESSIONS TABLE */
+.sessions-table{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+.sessions-header{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;padding:12px 20px;border-bottom:1px solid var(--border);font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-family:'DM Mono',monospace}
+.session-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr;padding:13px 20px;border-bottom:1px solid var(--border);font-size:13px;align-items:center;transition:background .1s}
+.session-row:last-child{border-bottom:none}
+.session-row:hover{background:var(--surface2)}
+
+/* TEAM TAB */
+.team-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+.team-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+.team-card h3{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:4px}
+.team-card p{font-size:13px;color:var(--muted);margin-bottom:20px}
+.member-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.member-row:last-child{border:none}
+.member-info{display:flex;align-items:center;gap:10px}
+.member-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:white}
+.member-name{font-size:13px;font-weight:600}
+.member-email{font-size:11px;color:var(--muted)}
+.member-usage{font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)}
+.invite-form{display:flex;gap:8px;margin-top:4px}
+.invite-input{flex:1;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none}
+.invite-input:focus{border-color:var(--accent)}
+.btn-invite{background:var(--accent);color:#fff;border:none;padding:10px 18px;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn-invite:hover{opacity:.9}
+
+/* SETTINGS */
+.settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+.settings-card h3{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:4px}
+.settings-card p{font-size:13px;color:var(--muted);margin-bottom:20px}
+.settings-field{margin-bottom:16px}
+.settings-field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.settings-field input,.settings-field select{width:100%;padding:10px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;outline:none}
+.settings-field input:focus,.settings-field select:focus{border-color:var(--accent)}
+.btn-save{background:var(--accent);color:#fff;border:none;padding:10px 20px;border-radius:10px;font-family:'Syne',sans-serif;font-weight:700;font-size:14px;cursor:pointer;transition:opacity .15s}
+.btn-save:hover{opacity:.9}
+.btn-danger{background:rgba(224,90,26,0.08);color:var(--warn);border:1px solid rgba(224,90,26,0.2);padding:10px 20px;border-radius:10px;font-family:'Syne',sans-serif;font-weight:600;font-size:14px;cursor:pointer;transition:all .15s}
+.btn-danger:hover{background:rgba(224,90,26,0.15)}
+.alert-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface2);border-radius:10px;padding:12px 16px;margin-bottom:10px}
+.alert-info{font-size:13px}
+.alert-info span{font-size:11px;color:var(--muted);display:block;margin-top:2px}
+.btn-remove-alert{background:none;border:none;color:var(--warn);cursor:pointer;font-size:18px}
+
+/* UPGRADE MODAL */
+.modal-bg{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.5);backdrop-filter:blur(8px);align-items:center;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:40px;width:100%;max-width:480px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px}
+.modal-close:hover{background:var(--surface2)}
+.plan-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:20px 0}
+.plan-card{background:var(--surface2);border:1.5px solid var(--border);border-radius:14px;padding:20px;cursor:pointer;transition:border-color .15s}
+.plan-card:hover,.plan-card.selected{border-color:var(--accent2)}
+.plan-card.selected{background:rgba(109,85,232,0.06)}
+.plan-name{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;margin-bottom:4px}
+.plan-price{font-family:'DM Mono',monospace;font-size:22px;font-weight:500;color:var(--accent);margin-bottom:8px}
+.plan-features{font-size:12px;color:var(--muted);line-height:1.6}
+.btn-checkout{width:100%;padding:14px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:16px;cursor:pointer;transition:opacity .15s,transform .1s}
+.btn-checkout:hover{opacity:.9;transform:translateY(-1px)}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:var(--bg);padding:12px 20px;border-radius:12px;font-size:14px;font-weight:500;z-index:999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+
+/* ONBOARDING MODAL */
+.onboard-modal{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:40px;width:100%;max-width:520px;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.15)}
+.onboard-steps{display:flex;flex-direction:column;gap:14px;margin:20px 0}
+.onboard-step{display:flex;gap:14px;align-items:flex-start;padding:14px;background:var(--surface2);border-radius:12px;border:1px solid var(--border)}
+.onboard-num{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:13px;flex-shrink:0}
+.onboard-title{font-weight:700;font-size:14px;margin-bottom:3px}
+.onboard-desc{font-size:13px;color:var(--muted);line-height:1.5}
+/* PASSWORD RESET */
+#auth-reset{display:none}
+.btn-link{background:none;border:none;color:var(--accent);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif;padding:0;text-decoration:underline;display:block;margin-top:8px;text-align:right}
+/* MOBILE BOTTOM NAV */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:6px 0 8px;z-index:100;box-shadow:0 -2px 12px rgba(0,0,0,0.08)}
+.mobile-nav button{flex:1;background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;transition:color .15s}
+.mobile-nav button.active{color:var(--accent)}
+.mobile-nav button .mn-icon{font-size:20px}
+/* APP FOOTER */
+.app-footer{text-align:center;padding:24px 16px;color:var(--muted);font-size:12px;border-top:1px solid var(--border);margin-top:40px}
+.app-footer a{color:var(--muted);text-decoration:none;margin:0 8px;transition:color .15s}
+.app-footer a:hover{color:var(--accent)}
+/* FILE UPLOAD */
+.file-upload-panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);margin-top:16px}
+.file-drop-zone{border:2px dashed var(--border);border-radius:12px;margin:16px;padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative}
+.file-drop-zone:hover,.file-drop-zone.dragover{border-color:var(--accent);background:rgba(0,165,114,0.04)}
+.file-drop-icon{font-size:32px;margin-bottom:10px}
+.file-drop-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px}
+.file-drop-sub{font-size:12px;color:var(--muted)}
+.file-drop-sub strong{color:var(--accent)}
+.file-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.file-result{display:none;padding:16px;border-top:1px solid var(--border)}
+.file-result.show{display:block}
+.file-info{display:flex;align-items:center;gap:12px;padding:12px;background:var(--surface2);border-radius:10px;margin-bottom:12px}
+.file-icon{font-size:24px;flex-shrink:0}
+.file-name{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-size{font-size:11px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+.file-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.file-stat{background:var(--surface2);border-radius:10px;padding:12px;text-align:center}
+.file-stat-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:var(--accent)}
+.file-stat-key{font-size:10px;color:var(--muted);font-family:'DM Mono',monospace;margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.file-costs{display:flex;flex-direction:column;gap:6px}
+.file-cost-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:6px 10px;background:var(--surface2);border-radius:8px}
+.file-processing{display:none;padding:20px;text-align:center;color:var(--muted);font-size:13px}
+.file-processing.show{display:block}
+.file-processing-spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 10px}
+.btn-use-file{width:100%;background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;padding:10px;border-radius:10px;cursor:pointer;margin-top:10px;transition:opacity .15s}
+.btn-use-file:hover{opacity:.9}
+.file-tabs{display:flex;gap:4px;padding:12px 16px 0}
+.file-tab{background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:6px 14px;border-radius:8px;cursor:pointer;transition:all .15s}
+.file-tab.active{background:var(--surface2);color:var(--accent);font-weight:600}
+
+@media(max-width:900px){
+  .analyzer-grid,.settings-grid,.team-grid,.chart-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  header{padding:0 12px}
+  main{padding:16px 12px;padding-bottom:80px}
+  nav{display:none}
+  .mobile-nav{display:flex}
+  .header-right .plan-badge{display:none}
+  .user-btn span{display:none}
+  .dashboard-header{flex-direction:column;gap:8px}
+  .dash-actions{width:100%;justify-content:flex-end}
+  .sessions-header{grid-template-columns:2fr 1fr 1fr}
+  .sessions-header span:nth-child(2),.sessions-header span:nth-child(5){display:none}
+  .session-row{grid-template-columns:2fr 1fr 1fr}
+  .session-row>span:nth-child(2),.session-row>span:nth-child(5){display:none}
+}
+</style>
+<!-- PDF.js for PDF parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- Mammoth.js for Word .docx parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<!-- SheetJS for Excel parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Sentry error monitoring -->
+<script src="https://js.sentry-cdn.com/YOUR_SENTRY_DSN.min.js" crossorigin="anonymous"></script>
+<script>
+  // Sentry auto-initializes from the CDN script above.
+  // Replace YOUR_SENTRY_DSN in the src above with your actual DSN from sentry.io
+  // Example DSN: https://abc123@o123456.ingest.sentry.io/123456
+  if (window.Sentry) {
+    Sentry.init({
+      dsn: 'YOUR_SENTRY_DSN_HERE',
+      environment: window.location.hostname.includes('localhost') ? 'development' : 'production',
+      tracesSampleRate: 0.1,
+      beforeSend(event) {
+        // Strip any auth tokens from error reports
+        if (event.request && event.request.headers) {
+          delete event.request.headers['Authorization'];
+        }
+        return event;
+      }
+    });
+  }
+</script>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-logo">⚡ TokenWise</div>
+  <div class="loading-spinner"></div>
+</div>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo"><div class="auth-logo-icon">⚡</div>Token<em>Wise</em></div>
+    <div id="auth-signup">
+      <div class="auth-title">Create your account</div>
+      <div class="auth-sub">Start your 7-day free Pro trial. No credit card needed.</div>
+      <div class="auth-error" id="signup-error"></div>
+      <button class="btn-google" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+        Continue with Google
+      </button>
+      <div class="auth-divider">or</div>
+      <div class="field"><label>Full name</label><input type="text" id="signup-name" placeholder="Jane Smith"></div>
+      <div class="field"><label>Email</label><input type="email" id="signup-email" placeholder="jane@example.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="signup-password" placeholder="Min 8 characters"></div>
+      <button class="btn-auth" onclick="signUp()">Create account →</button>
+      <div class="auth-switch">Already have an account? <a onclick="showLogin()">Log in</a></div>
+    </div>
+    <div id="auth-login" style="display:none">
+      <div class="auth-title">Welcome back</div>
+      <div class="auth-sub">Log in to your TokenWise account.</div>
+      <div class="auth-error" id="login-error"></div>
+      <button class="btn-google" onclick="signInWithGoogle()">
+        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
+        Continue with Google
+      </button>
+      <div class="auth-divider">or</div>
+      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="jane@example.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="login-password" placeholder="Your password"></div>
+      <button class="btn-auth" onclick="logIn()">Log in →</button>
+      <button class="btn-link" onclick="showReset()">Forgot password?</button>
+      <div class="auth-switch">No account? <a onclick="showSignup()">Sign up free</a></div>
+    </div>
+    <!-- PASSWORD RESET -->
+    <div id="auth-reset">
+      <div class="auth-title">Reset password</div>
+      <div class="auth-sub">Enter your email and we'll send a reset link.</div>
+      <div class="auth-error" id="reset-error"></div>
+      <div class="field"><label>Email</label><input type="email" id="reset-email" placeholder="jane@example.com"></div>
+      <button class="btn-auth" onclick="sendReset()">Send reset link →</button>
+      <div class="auth-switch"><a onclick="showLogin()">← Back to login</a></div>
+    </div>
+  </div>
+</div>
+
+<div id="app-screen">
+  <header>
+    <div class="logo"><div class="logo-icon">⚡</div>Token<em>Wise</em></div>
+    <nav>
+      <button class="active" onclick="switchTab('analyzer',this)">Analyzer</button>
+      <button onclick="switchTab('dashboard',this)">Dashboard</button>
+      <button onclick="switchTab('team',this)">Team</button>
+      <button onclick="switchTab('settings',this)">Settings</button>
+      <button onclick="switchTab('library',this)">Library</button>
+      <button onclick="switchTab('context',this)">Context</button>
+    </nav>
+    <div class="header-right">
+      <span class="plan-badge badge-free" id="plan-badge">FREE</span>
+      <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle theme">☀️</button>
+      <div class="user-btn" onclick="switchTab('settings',document.querySelectorAll('nav button')[3])">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <span id="user-name-short">User</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="upgrade-banner">
+    <span class="upgrade-text">You're on the <em>Free plan</em> — <strong id="compressions-left">3</strong> compressions left this month.</span>
+    <button class="btn-upgrade" onclick="openUpgradeModal()">Upgrade to Pro →</button>
+  </div>
+
+  <main>
+    <!-- ANALYZER -->
+    <div id="tab-analyzer" class="tab-content active">
+      <div class="analyzer-grid">
+        <div>
+          <div class="panel">
+            <div class="panel-header">
+              <span class="panel-title">Prompt Analyzer</span>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="accuracy-badge">✓ BPE Tokenizer</span>
+                <span class="panel-meta" id="char-count">0 chars</span>
+              </div>
+            </div>
+            <textarea class="prompt-area" id="promptInput" placeholder="Paste or type your prompt here. TokenWise uses the real BPE tokenizer — same algorithm the AI models use — for accurate counts..." oninput="analyzePrompt()"></textarea>
+            <div id="warn-banner" class="warn-banner"></div>
+            <div class="context-bar-wrap">
+              <div class="context-label"><span>Context window usage</span><span id="context-pct">0%</span></div>
+              <div class="context-bar"><div class="context-fill" id="context-fill" style="width:0%"></div></div>
+            </div>
+            <div class="prompt-footer">
+              <div class="token-pill"><div class="dot"></div><span id="token-count" class="token-count">0</span><span style="color:var(--muted);font-size:12px">tokens</span></div>
+              <div class="token-pill"><div class="dot" style="background:var(--accent2)"></div><span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent2)" id="word-count">0</span><span style="color:var(--muted);font-size:12px">words</span></div>
+              <div style="margin-left:auto;display:flex;gap:8px">
+                <button onclick="copyPrompt()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer">Copy</button>
+                <button onclick="clearPrompt()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer">Clear</button>
+              </div>
+            </div>
+          </div>
+          <div class="panel" style="margin-top:16px">
+            <div class="model-selector">
+              <div class="model-label">Active Model</div>
+              <div class="model-tabs">
+                <button class="model-tab active-claude" onclick="selectModel('claude-3-opus',this)">Claude 3 Opus</button>
+                <button class="model-tab" onclick="selectModel('claude-3-sonnet',this)">Claude 3.5 Sonnet</button>
+                <button class="model-tab" onclick="selectModel('claude-3-haiku',this)">Claude 3 Haiku</button>
+                <button class="model-tab" onclick="selectModel('gpt-4o',this)">GPT-4o</button>
+                <button class="model-tab" onclick="selectModel('gpt-4-turbo',this)">GPT-4 Turbo</button>
+                <button class="model-tab" onclick="selectModel('gemini-1.5-pro',this)">Gemini 1.5 Pro</button>
+                <button class="model-tab" onclick="selectModel('gemini-flash',this)">Gemini Flash</button>
+                <button class="model-tab" onclick="selectModel('gpt-3.5',this)">GPT-3.5</button>
+              </div>
+            </div>
+          </div>
+          <!-- FILE UPLOAD PANEL -->
+          <div class="file-upload-panel">
+            <div class="panel-header">
+              <span class="panel-title">📄 File Analyzer</span>
+              <span class="panel-meta">Word · PDF · Excel · TXT</span>
+            </div>
+            <div class="file-tabs">
+              <button class="file-tab active" onclick="switchFileTab('upload',this)">Upload File</button>
+              <button class="file-tab" onclick="switchFileTab('result',this)" id="file-result-tab" style="display:none">Results</button>
+            </div>
+            <div id="file-upload-zone">
+              <div class="file-drop-zone" id="file-drop-zone"
+                ondragover="handleDragOver(event)"
+                ondragleave="handleDragLeave(event)"
+                ondrop="handleFileDrop(event)">
+                <input class="file-input" type="file" id="file-input"
+                  accept=".pdf,.docx,.doc,.xlsx,.xls,.csv,.txt,.md"
+                  onchange="handleFileSelect(event)">
+                <div class="file-drop-icon">📂</div>
+                <div class="file-drop-title">Drop a file or click to browse</div>
+                <div class="file-drop-sub">Supports <strong>PDF, Word, Excel, CSV, TXT</strong></div>
+              </div>
+            </div>
+            <div class="file-processing" id="file-processing">
+              <div class="file-processing-spinner"></div>
+              Reading file and counting tokens...
+            </div>
+            <div class="file-result" id="file-result">
+              <div class="file-info">
+                <div class="file-icon" id="file-icon">📄</div>
+                <div>
+                  <div class="file-name" id="file-name">filename.pdf</div>
+                  <div class="file-size" id="file-size">0 KB</div>
+                </div>
+              </div>
+              <div class="file-stats">
+                <div class="file-stat">
+                  <div class="file-stat-val" id="file-tokens">0</div>
+                  <div class="file-stat-key">Tokens</div>
+                </div>
+                <div class="file-stat">
+                  <div class="file-stat-val" id="file-words">0</div>
+                  <div class="file-stat-key">Words</div>
+                </div>
+                <div class="file-stat">
+                  <div class="file-stat-val" id="file-pages">—</div>
+                  <div class="file-stat-key">Pages</div>
+                </div>
+              </div>
+              <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:8px">COST TO SEND FULL FILE TO AI</div>
+              <div class="file-costs" id="file-costs"></div>
+              <button class="btn-use-file" onclick="useFileInAnalyzer()">Load into Analyzer →</button>
+              <button onclick="resetFileUpload()" style="width:100%;background:none;border:1px solid var(--border);color:var(--muted);padding:8px;border-radius:10px;font-size:12px;cursor:pointer;margin-top:8px">Upload another file</button>
+            </div>
+          </div>
+        </div>
+        <div class="sidebar">
+          <div class="cost-card">
+            <div class="cost-label">Estimated Cost (Input)</div>
+            <div class="cost-value" id="main-cost">$0.000000</div>
+            <div class="cost-sub" id="main-cost-sub">Based on current model pricing</div>
+            <div class="divider"></div>
+            <div class="model-costs">
+              <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px">ALL MODELS</div>
+              <div class="model-cost-row"><div class="model-cost-name"><div class="model-dot" style="background:var(--claude)"></div>Claude 3 Opus</div><div class="model-cost-price" style="color:var(--claude)" id="cost-claude-opus">$0.000000</div></div>
+              <div class="model-cost-row"><div class="model-cost-name"><div class="model-dot" style="background:var(--claude);opacity:.7"></div>Claude Sonnet</div><div class="model-cost-price" style="color:var(--claude);opacity:.8" id="cost-claude-sonnet">$0.000000</div></div>
+              <div class="model-cost-row"><div class="model-cost-name"><div class="model-dot" style="background:var(--claude);opacity:.4"></div>Claude Haiku</div><div class="model-cost-price" style="color:var(--claude);opacity:.6" id="cost-claude-haiku">$0.000000</div></div>
+              <div class="model-cost-row"><div class="model-cost-name"><div class="model-dot" style="background:var(--gpt)"></div>GPT-4o</div><div class="model-cost-price" style="color:var(--gpt)" id="cost-gpt4o">$0.000000</div></div>
+              <div class="model-cost-row"><div class="model-cost-name"><div class="model-dot" style="background:var(--gpt);opacity:.7"></div>GPT-4 Turbo</div><div class="model-cost-price" style="color:var(--gpt);opacity:.8" id="cost-gpt4-turbo">$0.000000</div></div>
+              <div class="model-cost-row"><div class="model-cost-name"><div class="model-dot" style="background:var(--gemini)"></div>Gemini 1.5 Pro</div><div class="model-cost-price" style="color:var(--gemini)" id="cost-gemini-pro">$0.000000</div></div>
+              <div class="model-cost-row"><div class="model-cost-name"><div class="model-dot" style="background:var(--gemini);opacity:.7"></div>Gemini Flash</div><div class="model-cost-price" style="color:var(--gemini);opacity:.8" id="cost-gemini-flash">$0.000000</div></div>
+            </div>
+            <div style="margin-top:14px;padding:10px;background:var(--surface2);border-radius:10px;font-size:11px;color:var(--muted)">
+              💡 <strong id="cheapest-model" style="color:var(--accent)">Gemini Flash</strong> is cheapest for this prompt
+            </div>
+          </div>
+          <div class="compress-card">
+            <div class="compress-title">AI Compression <span class="chip">PRO</span></div>
+            <div id="tips-container"><div style="color:var(--muted);font-size:12px;padding:8px 0">Type a prompt to get AI-powered compression suggestions.</div></div>
+            <button class="compress-btn" id="compress-btn" onclick="handleCompress()">✨ Analyze & Compress Prompt</button>
+            <div id="compress-limit-msg" style="display:none;text-align:center;margin-top:8px;font-size:11px;color:var(--muted)"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="tab-dashboard" class="tab-content">
+      <div class="dashboard-header">
+        <div>
+          <h1>Usage Dashboard</h1>
+          <p id="dash-subtitle">Your AI spending overview</p>
+        </div>
+        <div class="dash-actions">
+          <button class="btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+          <button class="btn-export" onclick="loadDashboard()">↻ Refresh</button>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Total Tokens</div><div class="stat-value" id="dash-tokens">—</div><div class="stat-change">This month</div></div>
+        <div class="stat-card"><div class="stat-label">Estimated Spend</div><div class="stat-value" id="dash-spend">—</div><div class="stat-change" id="dash-spend-sub">GPT-4o equivalent</div></div>
+        <div class="stat-card"><div class="stat-label">Avg Cost / Prompt</div><div class="stat-value" id="dash-avg">—</div><div class="stat-change">This month</div></div>
+        <div class="stat-card"><div class="stat-label">Prompts Tracked</div><div class="stat-value" id="dash-count">—</div><div class="stat-change">This month</div></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title">
+            Daily Token Usage
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Tokens</div>
+            </div>
+          </div>
+          <canvas id="usageChart" height="140"></canvas>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Model Breakdown</div>
+          <div id="model-breakdown">
+            <div style="color:var(--muted);font-size:13px">No data yet</div>
+          </div>
+        </div>
+      </div>
+      <div class="sessions-table">
+        <div class="panel-header" style="padding:14px 20px"><span class="panel-title">Recent Sessions</span></div>
+        <div class="sessions-header"><span>Info</span><span>Source</span><span>Tokens</span><span>Est. Cost</span><span>Time</span></div>
+        <div id="sessions-list"><div style="padding:32px;text-align:center;color:var(--muted)">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- TEAM -->
+    <div id="tab-team" class="tab-content">
+      <div class="dashboard-header">
+        <div><h1>Team</h1><p>Invite teammates and track shared AI spending</p></div>
+      </div>
+      <div id="team-upgrade-notice" style="display:none;background:rgba(109,85,232,0.06);border:1px solid rgba(109,85,232,0.2);border-radius:14px;padding:24px;text-align:center;margin-bottom:24px">
+        <div style="font-size:24px;margin-bottom:8px">👥</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;margin-bottom:6px">Team features require Agency plan</div>
+        <div style="font-size:14px;color:var(--muted);margin-bottom:16px">Upgrade to invite teammates and see shared usage dashboards</div>
+        <button class="btn-upgrade" onclick="openUpgradeModal()">Upgrade to Agency →</button>
+      </div>
+      <div id="team-content">
+        <div class="team-grid">
+          <div class="team-card">
+            <h3>Invite Team Member</h3>
+            <p>Add teammates by email. They'll get access to the shared dashboard.</p>
+            <div class="invite-form">
+              <input class="invite-input" type="email" id="invite-email" placeholder="colleague@company.com">
+              <button class="btn-invite" onclick="inviteMember()">Invite</button>
+            </div>
+          </div>
+          <div class="team-card">
+            <h3>Team Stats</h3>
+            <p>Combined usage across all team members this month</p>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent)" id="team-total-tokens">0</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">Total Tokens</div>
+              </div>
+              <div style="background:var(--surface2);border-radius:10px;padding:14px;text-align:center">
+                <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:var(--accent2)" id="team-member-count">0</div>
+                <div style="font-size:11px;color:var(--muted);margin-top:2px">Members</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="sessions-table">
+          <div class="panel-header" style="padding:14px 20px"><span class="panel-title">Team Members</span></div>
+          <div id="team-members-list"><div style="padding:32px;text-align:center;color:var(--muted)">No team members yet. Invite someone above!</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="tab-settings" class="tab-content">
+      <div class="dashboard-header"><div><h1>Settings</h1><p>Manage your account and preferences</p></div></div>
+      <div class="settings-grid">
+        <div class="settings-card">
+          <h3>Account</h3>
+          <p>Your profile information</p>
+          <div class="settings-field"><label>Full Name</label><input type="text" id="settings-name" placeholder="Your name"></div>
+          <div class="settings-field"><label>Email</label><input type="email" id="settings-email" disabled></div>
+          <button class="btn-save" onclick="saveProfile()">Save Changes</button>
+        </div>
+        <div class="settings-card">
+          <h3>Subscription</h3>
+          <p>Your current TokenWise plan</p>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px">
+            <div style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:4px">CURRENT PLAN</div>
+            <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800" id="settings-plan-name">Free</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px" id="settings-plan-desc">3 compressions/month</div>
+          </div>
+          <button class="btn-upgrade" style="width:100%;padding:12px;border-radius:10px;font-size:14px" onclick="openUpgradeModal()">Upgrade Plan →</button>
+        </div>
+        <div class="settings-card">
+          <h3>Budget Alerts</h3>
+          <p>Get notified when your AI spend hits a threshold</p>
+          <div id="alerts-list" style="margin-bottom:16px"></div>
+          <div style="display:flex;gap:8px">
+            <select id="alert-threshold" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none">
+              <option value="5">Alert at $5</option>
+              <option value="10" selected>Alert at $10</option>
+              <option value="25">Alert at $25</option>
+              <option value="50">Alert at $50</option>
+              <option value="100">Alert at $100</option>
+            </select>
+            <button class="btn-save" onclick="saveBudgetAlert()">Add Alert</button>
+          </div>
+        </div>
+        <div class="settings-card">
+          <h3>Danger Zone</h3>
+          <p>These actions cannot be undone</p>
+          <button class="btn-danger" style="width:100%;margin-bottom:10px" onclick="signOut()">Sign out</button>
+          <button class="btn-danger" style="width:100%" onclick="confirmDelete()">Delete all my data</button>
+        </div>
+      </div>
+    </div>
+    <footer class="app-footer">
+      <a href="/frontend/privacy.html" target="_blank">Privacy Policy</a>
+      <a href="/frontend/terms.html" target="_blank">Terms of Service</a>
+      <a href="mailto:usamabintariq582@gmail.com">Support</a>
+      <span style="margin-left:8px">© 2026 TokenWise</span>
+    </footer>
+  </main>
+</div>
+
+
+    <!-- LIBRARY TAB -->
+    <div id="tab-library" class="tab-content">
+      <div class="dashboard-header">
+        <div><h1>Prompt Library</h1><p>Your personal prompt intelligence — built automatically as you use TokenWise</p></div>
+        <div style="display:flex;align-items:center;gap:8px;background:rgba(109,85,232,0.08);border:1px solid rgba(109,85,232,0.2);border-radius:10px;padding:8px 14px;font-size:12px">
+          <span>🧠 Contribute to training</span>
+          <label style="position:relative;width:34px;height:19px;cursor:pointer;flex-shrink:0">
+            <input type="checkbox" id="lib-consent-toggle" onchange="toggleTrainingConsent(this.checked)" style="opacity:0;width:0;height:0">
+            <span id="lib-consent-slider" style="position:absolute;inset:0;background:var(--surface3,#e0e0dc);border-radius:10px;transition:.2s;border:1px solid var(--border)"></span>
+          </label>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        <div class="stat-card"><div class="stat-label">Prompts saved</div><div class="stat-value" id="lib-stat-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Total uses</div><div class="stat-value" id="lib-stat-uses">—</div></div>
+        <div class="stat-card"><div class="stat-label">Cost saved</div><div class="stat-value" id="lib-stat-saved">—</div></div>
+      </div>
+      <div id="lib-suggestion" style="display:none;background:linear-gradient(135deg,rgba(0,165,114,.06),rgba(109,85,232,.06));border:1px solid rgba(0,165,114,.15);border-radius:12px;padding:14px 16px;margin-bottom:16px;cursor:pointer;align-items:center;gap:12px" onclick="libFilterCategory(libSuggestionCat)">
+        <span style="font-size:20px">💡</span>
+        <div style="flex:1"><div id="lib-suggestion-title" style="font-weight:700;font-size:13px;margin-bottom:2px"></div><div id="lib-suggestion-sub" style="font-size:12px;color:var(--muted)"></div></div>
+        <span style="color:var(--accent)">→</span>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+        <input type="text" id="lib-search" placeholder="Search prompts…" oninput="libSearch(this.value)" style="flex:1;min-width:180px;padding:9px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;outline:none">
+        <select id="lib-category" onchange="libFilterCategory(this.value)" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:8px 12px;font-size:13px;color:var(--text);outline:none">
+          <option value="all">All</option><option value="code">💻 Code</option><option value="writing">✍️ Writing</option><option value="analysis">🔍 Analysis</option><option value="qa">💬 Q&A</option><option value="data">📊 Data</option><option value="creative">🎨 Creative</option><option value="pinned">📌 Pinned</option>
+        </select>
+        <select id="lib-sort" onchange="libApplySortAndRender(this.value)" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:8px 12px;font-size:13px;color:var(--text);outline:none">
+          <option value="use_count">Most used</option><option value="last_used_at">Recent</option><option value="created_at">Newest</option>
+        </select>
+      </div>
+      <div id="lib-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+        <div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">📚</div><div style="font-weight:700;font-size:16px;margin-bottom:6px">Your library is building</div><div style="font-size:13px">Every prompt you analyze or compress is saved here automatically.</div></div>
+      </div>
+    </div>
+
+    <!-- CONTEXT PORTABILITY TAB -->
+    <div id="tab-context" class="tab-content">
+      <div class="dashboard-header"><div><h1>Context Portability</h1><p>Carry your conversation across Claude, ChatGPT, and Gemini without losing context</p></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div class="settings-card" style="border-top:3px solid var(--accent)"><h3 style="margin-bottom:8px">How it works</h3><p style="font-size:13px;color:var(--muted);line-height:1.7">When you finish a conversation, TokenWise compresses it into a 150–300 token summary. Switch to any other AI model and that context is injected automatically — your follow-up makes sense even though the model never saw your original conversation.</p></div>
+        <div class="settings-card" style="border-top:3px solid var(--accent2)"><h3 style="margin-bottom:8px">Why this is unique</h3><p style="font-size:13px;color:var(--muted);line-height:1.7">No AI platform will build this — Claude has no incentive to carry GPT context, and vice versa. Only a neutral tool like TokenWise can work across all models simultaneously.</p></div>
+      </div>
+      <div class="settings-card" id="ctx-active-card">
+        <h3 style="margin-bottom:12px">Active Context</h3>
+        <div id="ctx-status"><div style="text-align:center;padding:32px;color:var(--muted)"><div style="font-size:32px;margin-bottom:8px">💬</div><div style="font-weight:600;margin-bottom:4px">No active context</div><div style="font-size:12px">Complete a session or paste a conversation below to save context</div></div></div>
+      </div>
+      <div class="settings-card" style="margin-top:16px">
+        <h3 style="margin-bottom:8px">Save context manually</h3>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">Paste your conversation and we'll compress it into a portable context summary.</p>
+        <textarea id="ctx-input" placeholder="Paste your conversation here…" style="width:100%;height:120px;padding:12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;outline:none;margin-bottom:10px"></textarea>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <select id="ctx-site" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;color:var(--text);outline:none"><option value="claude.ai">Claude.ai</option><option value="chat.openai.com">ChatGPT</option><option value="gemini.google.com">Gemini</option></select>
+          <select id="ctx-model" style="background:var(--surface2);border:1.5px solid var(--border);border-radius:9px;padding:9px 12px;font-size:13px;color:var(--text);outline:none"><option value="claude-3-sonnet">Claude 3.5 Sonnet</option><option value="claude-3-opus">Claude 3 Opus</option><option value="gpt-4o">GPT-4o</option><option value="gemini-1.5-pro">Gemini 1.5 Pro</option></select>
+          <button onclick="saveContextManually()" style="padding:9px 20px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700;cursor:pointer;font-family:inherit">Save Context →</button>
+        </div>
+        <div id="ctx-result" style="display:none;margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Compressed context (<span id="ctx-token-count">—</span> tokens)</div>
+          <div id="ctx-summary-text" style="font-size:13px;line-height:1.7"></div>
+          <button onclick="copyContextSummary()" style="margin-top:10px;background:none;border:1px solid var(--border);border-radius:7px;padding:6px 14px;font-size:12px;color:var(--muted);cursor:pointer">📋 Copy to clipboard</button>
+        </div>
+      </div>
+      <div class="settings-card" style="margin-top:16px">
+        <h3 style="margin-bottom:12px">Context history <span style="font-size:12px;font-weight:400;color:var(--muted)">(last 24 hours)</span></h3>
+        <div id="ctx-history"><div style="color:var(--muted);font-size:13px">Loading…</div></div>
+      </div>
+    </div>
+
+<!-- Mobile bottom nav -->
+<nav class="mobile-nav" id="mobile-nav">
+  <button class="active" onclick="switchTab('analyzer',this);syncMobileNav(this)"><span class="mn-icon">⚡</span>Analyzer</button>
+  <button onclick="switchTab('dashboard',this);syncMobileNav(this)"><span class="mn-icon">📊</span>Dashboard</button>
+  <button onclick="switchTab('team',this);syncMobileNav(this)"><span class="mn-icon">👥</span>Team</button>
+  <button onclick="switchTab('settings',this);syncMobileNav(this)"><span class="mn-icon">⚙️</span>Settings</button>
+  <button onclick="switchTab('library',this);syncMobileNav(this)"><span class="mn-icon">📚</span>Library</button>
+</nav>
+
+<!-- Upgrade Modal -->
+<div class="modal-bg" id="upgrade-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeUpgradeModal()">✕</button>
+    <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px">Upgrade TokenWise</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:4px">Choose your plan</div>
+    <div class="plan-cards">
+      <div class="plan-card selected" id="plan-pro" onclick="selectPlan('pro')">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">$9.99<span style="font-size:13px;color:var(--muted)">/mo</span></div>
+        <div class="plan-features">Unlimited compressions<br>Full dashboard + charts<br>CSV export<br>Budget alerts<br>All 8 models</div>
+      </div>
+      <div class="plan-card" id="plan-agency" onclick="selectPlan('agency')">
+        <div class="plan-name">Agency</div>
+        <div class="plan-price">$49<span style="font-size:13px;color:var(--muted)">/mo</span></div>
+        <div class="plan-features">Everything in Pro<br>10 team seats<br>Team dashboard<br>Per-seat tracking<br>Priority support</div>
+      </div>
+    </div>
+    <button class="btn-checkout" onclick="goToCheckout()">Start 7-day free trial →</button>
+    <div style="text-align:center;font-size:12px;color:var(--muted);margin-top:12px">No credit card required • Cancel anytime</div>
+  </div>
+</div>
+
+<!-- Onboarding Modal -->
+<div class="modal-bg" id="onboard-modal">
+  <div class="onboard-modal">
+    <div style="font-size:32px;margin-bottom:12px">👋</div>
+    <div style="font-family:'Syne',sans-serif;font-size:24px;font-weight:800;margin-bottom:6px">Welcome to TokenWise!</div>
+    <div style="font-size:14px;color:var(--muted);margin-bottom:4px">Here's how to get value in the next 5 minutes:</div>
+    <div class="onboard-steps">
+      <div class="onboard-step">
+        <div class="onboard-num">1</div>
+        <div><div class="onboard-title">Try the Analyzer</div><div class="onboard-desc">Paste any AI prompt into the Analyzer tab. See its exact token count and cost across all models instantly.</div></div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-num">2</div>
+        <div><div class="onboard-title">Set a budget alert</div><div class="onboard-desc">Go to Settings → Budget Alerts. Set a monthly limit. We'll email you before you overspend.</div></div>
+      </div>
+      <div class="onboard-step">
+        <div class="onboard-num">3</div>
+        <div><div class="onboard-title">Install the Chrome Extension</div><div class="onboard-desc">See live token counts inside ChatGPT, Claude, and Gemini as you type — no copy-pasting needed.</div></div>
+      </div>
+    </div>
+    <button class="btn-checkout" onclick="closeOnboarding()">Get started →</button>
+    <div style="text-align:center;margin-top:12px"><button class="btn-link" onclick="closeOnboarding()">Skip for now</button></div>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ══════════════════════════════════════════════
+// CONFIG — Replace with your real values
+// ══════════════════════════════════════════════
+const SUPABASE_URL = 'https://eojugvrsovcheebdtwfc.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_B4M8XKkh6ClyavmRKF0b0g_8VJ8V'; // ← paste your full key here
+const NETLIFY_BASE = 'https://charming-paprenjak-a981d7.netlify.app/.netlify/functions';
+const LEMON_PRO_LINK = 'https://YOUR_LEMONSQUEEZY_PRO_LINK';
+const LEMON_AGENCY_LINK = 'https://YOUR_LEMONSQUEEZY_AGENCY_LINK';
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentUser = null, currentProfile = null, authToken = null;
+let activeModel = 'claude-3-opus', selectedPlan = 'pro';
+let usageChartInstance = null;
+
+// ── MODEL DATA ────────────────────────────────
+const MODELS = {
+  'claude-3-opus':   { name:'Claude 3 Opus',    context:200000, inputPer1M:15,   family:'claude' },
+  'claude-3-sonnet': { name:'Claude 3.5 Sonnet', context:200000, inputPer1M:3,    family:'claude' },
+  'claude-3-haiku':  { name:'Claude 3 Haiku',    context:200000, inputPer1M:0.25, family:'claude' },
+  'gpt-4o':          { name:'GPT-4o',            context:128000, inputPer1M:5,    family:'gpt'    },
+  'gpt-4-turbo':     { name:'GPT-4 Turbo',       context:128000, inputPer1M:10,   family:'gpt'    },
+  'gpt-3.5':         { name:'GPT-3.5 Turbo',     context:16000,  inputPer1M:0.5,  family:'gpt'    },
+  'gemini-1.5-pro':  { name:'Gemini 1.5 Pro',    context:1000000,inputPer1M:3.5,  family:'gemini' },
+  'gemini-flash':    { name:'Gemini Flash',       context:1000000,inputPer1M:0.35, family:'gemini' },
+};
+
+const ALL_COSTS = [
+  { id:'cost-claude-opus',   per1M:15    },
+  { id:'cost-claude-sonnet', per1M:3     },
+  { id:'cost-claude-haiku',  per1M:0.25  },
+  { id:'cost-gpt4o',         per1M:5     },
+  { id:'cost-gpt4-turbo',    per1M:10    },
+  { id:'cost-gemini-pro',    per1M:3.5   },
+  { id:'cost-gemini-flash',  per1M:0.35  },
+];
+
+// ── REAL BPE TOKENIZER ────────────────────────
+function countTokens(text) {
+  if (!text?.trim()) return 0;
+  try {
+    // Use real cl100k_base tokenizer (same as GPT-4, Claude uses similar BPE)
+    if (window.GPTTokenizer_cl100k_base) {
+      return window.GPTTokenizer_cl100k_base.encode(text).length;
+    }
+  } catch(e) {}
+  // Fallback: accurate approximation if tokenizer not loaded
+  const words = text.trim().split(/\s+/).length;
+  const chars = text.length;
+  return Math.ceil((words * 1.3 + chars * 0.08) / 1.35);
+}
+
+function formatCost(cost) {
+  if (!cost || cost === 0) return '$0.000000';
+  if (cost < 0.0001) return '$' + cost.toFixed(7);
+  if (cost < 0.001)  return '$' + cost.toFixed(6);
+  if (cost < 0.01)   return '$' + cost.toFixed(5);
+  return '$' + cost.toFixed(4);
+}
+
+function fmtNum(n) {
+  if (!n) return '0';
+  if (n >= 1000000) return (n/1000000).toFixed(1) + 'M';
+  if (n >= 1000) return (n/1000).toFixed(1) + 'K';
+  return n.toString();
+}
+
+function showToast(msg, duration=3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ── INIT ──────────────────────────────────────
+async function init() {
+  initTheme();
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    authToken = session.access_token;
+    await loadProfile();
+    showApp();
+  } else {
+    showAuth();
+  }
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      currentUser = session.user;
+      authToken = session.access_token;
+      await loadProfile();
+      showApp();
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null; currentProfile = null; authToken = null;
+      showAuth();
+    }
+  });
+}
+
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = data;
+  updateUIForPlan();
+  loadBudgetAlerts();
+}
+
+function updateUIForPlan() {
+  if (!currentProfile) return;
+  const plan = currentProfile.plan || 'free';
+  const name = currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User';
+  document.getElementById('user-avatar').textContent = name[0].toUpperCase();
+  document.getElementById('user-name-short').textContent = name.split(' ')[0];
+  document.getElementById('settings-name').value = name;
+  document.getElementById('settings-email').value = currentUser.email || '';
+  const badge = document.getElementById('plan-badge');
+  badge.className = 'plan-badge';
+  if (plan === 'pro') { badge.classList.add('badge-pro'); badge.textContent = 'PRO'; }
+  else if (plan === 'agency') { badge.classList.add('badge-agency'); badge.textContent = 'AGENCY'; }
+  else { badge.classList.add('badge-free'); badge.textContent = 'FREE'; }
+  const proUser = plan === 'pro' || plan === 'agency' || isTrialing();
+  const banner = document.getElementById('upgrade-banner');
+  if (!proUser) {
+    banner.classList.add('show');
+    document.getElementById('compressions-left').textContent = Math.max(0, 3 - (currentProfile.compressions_used || 0));
+  } else {
+    banner.classList.remove('show');
+  }
+  document.getElementById('settings-plan-name').textContent = plan.charAt(0).toUpperCase() + plan.slice(1);
+  document.getElementById('settings-plan-desc').textContent = proUser ? 'Unlimited compressions + all features' : '3 compressions/month';
+
+  // Team tab visibility
+  const isAgency = plan === 'agency';
+  document.getElementById('team-upgrade-notice').style.display = isAgency ? 'none' : 'block';
+  document.getElementById('team-content').style.display = isAgency ? 'block' : 'none';
+  if (isAgency) loadTeamData();
+}
+
+function isTrialing() {
+  if (!currentProfile) return false;
+  const trialEnd = currentProfile.trial_ends_at;
+  return currentProfile.subscription_status === 'trialing' || (trialEnd && new Date(trialEnd) > new Date());
+}
+
+function showApp() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'block';
+  loadDashboard();
+  // Show onboarding for first-time users
+  if (!localStorage.getItem('tw_onboarded')) {
+    setTimeout(showOnboarding, 1200);
+  }
+  // Send welcome email on first login (flag in localStorage)
+  const welcomeKey = 'tw_welcome_' + (currentUser?.id || '');
+  if (!localStorage.getItem(welcomeKey) && currentUser?.email && authToken) {
+    localStorage.setItem(welcomeKey, '1');
+    fetch(NETLIFY_BASE + '/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+      body: JSON.stringify({ type: 'welcome', email: currentUser.email })
+    }).catch(() => {}); // silent fail
+  }
+}
+
+function showAuth() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('app-screen').style.display = 'none';
+}
+
+// ── AUTH ──────────────────────────────────────
+async function signUp() {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const errEl = document.getElementById('signup-error');
+  errEl.style.display = 'none';
+  if (!email || !password) { showErr(errEl,'Please fill in all fields.'); return; }
+  if (password.length < 8) { showErr(errEl,'Password must be at least 8 characters.'); return; }
+  const { error } = await sb.auth.signUp({ email, password, options:{ data:{ full_name:name }}});
+  if (error) showErr(errEl, error.message);
+  else showErr(errEl, '✓ Check your email to confirm your account!');
+}
+async function logIn() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) showErr(errEl, error.message);
+}
+async function signInWithGoogle() {
+  await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: window.location.href }});
+}
+async function signOut() { await sb.auth.signOut(); }
+function showErr(el, msg) { el.textContent = msg; el.style.display = 'block'; }
+function showSignup() { document.getElementById('auth-signup').style.display='block'; document.getElementById('auth-login').style.display='none'; }
+function showLogin() { document.getElementById('auth-signup').style.display='none'; document.getElementById('auth-login').style.display='block'; }
+
+// ── ANALYZER ──────────────────────────────────
+let logDebounce = null;
+
+function analyzePrompt() {
+  const text = document.getElementById('promptInput').value;
+  const tokens = countTokens(text);
+  const words = text.trim().split(/\s+/).filter(w=>w.length>0).length;
+  const chars = text.length;
+
+  document.getElementById('token-count').textContent = tokens.toLocaleString();
+  document.getElementById('word-count').textContent = words.toLocaleString();
+  document.getElementById('char-count').textContent = chars.toLocaleString() + ' chars';
+
+  const model = MODELS[activeModel];
+  const pct = Math.min(100, (tokens / model.context) * 100);
+  document.getElementById('context-fill').style.width = pct + '%';
+  document.getElementById('context-pct').textContent = pct.toFixed(1) + '%';
+  document.getElementById('context-fill').classList.toggle('warn', pct > 80);
+
+  const banner = document.getElementById('warn-banner');
+  if (pct > 90) { banner.classList.add('show'); banner.textContent = `⚠ ${pct.toFixed(0)}% of ${model.name} context used — approaching limit!`; }
+  else if (pct > 70) { banner.classList.add('show'); banner.textContent = `You're at ${pct.toFixed(0)}% of the ${model.name} context window.`; }
+  else { banner.classList.remove('show'); }
+
+  document.getElementById('main-cost').textContent = formatCost((tokens/1e6) * model.inputPer1M);
+  document.getElementById('main-cost-sub').textContent = `${tokens.toLocaleString()} tokens × ${model.name}`;
+
+  ALL_COSTS.forEach(m => {
+    const el = document.getElementById(m.id);
+    if (el) el.textContent = formatCost((tokens/1e6) * m.per1M);
+  });
+
+  // Show cheapest model
+  const cheapest = ALL_COSTS.reduce((a,b) => a.per1M < b.per1M ? a : b);
+  const cheapNames = { 'cost-gemini-flash':'Gemini Flash', 'cost-claude-haiku':'Claude Haiku', 'cost-gpt4o':'GPT-4o', 'cost-gemini-pro':'Gemini 1.5 Pro', 'cost-claude-sonnet':'Claude Sonnet', 'cost-gpt4-turbo':'GPT-4 Turbo', 'cost-claude-opus':'Claude Opus' };
+  document.getElementById('cheapest-model').textContent = cheapNames[cheapest.id] || 'Gemini Flash';
+
+  if (tokens > 20 && authToken) {
+    clearTimeout(logDebounce);
+    logDebounce = setTimeout(() => logSession(tokens, words, chars), 3000);
+  }
+}
+
+async function logSession(tokens, words, characters) {
+  try {
+    await fetch(`${NETLIFY_BASE}/log-session`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({ tokens, words, characters, source_url:'tokenwise-app', model_used:activeModel })
+    });
+  } catch(e) {}
+}
+
+function selectModel(key, btn) {
+  activeModel = key;
+  document.querySelectorAll('.model-tab').forEach(t => t.className = 'model-tab');
+  btn.classList.add('active-' + MODELS[key].family);
+  analyzePrompt();
+}
+
+function clearPrompt() {
+  document.getElementById('promptInput').value = '';
+  analyzePrompt();
+}
+
+function copyPrompt() {
+  const text = document.getElementById('promptInput').value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => showToast('✓ Copied to clipboard'));
+}
+
+// ── COMPRESS ──────────────────────────────────
+async function handleCompress() {
+  const text = document.getElementById('promptInput').value;
+  if (!text.trim()) { alert('Please type a prompt first.'); return; }
+  const btn = document.getElementById('compress-btn');
+  const limitMsg = document.getElementById('compress-limit-msg');
+  const container = document.getElementById('tips-container');
+  btn.textContent = '⏳ Analyzing...';
+  btn.disabled = true;
+  limitMsg.style.display = 'none';
+  container.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">AI is analyzing your prompt...</div>';
+  try {
+    const res = await fetch(`${NETLIFY_BASE}/compress`, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${authToken}`},
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json();
+    if (res.status === 402) {
+      container.innerHTML = `<div style="color:var(--warn);font-size:12px;padding:8px 0">You've used all 3 free compressions this month.</div>`;
+      limitMsg.style.display = 'block';
+      limitMsg.innerHTML = `<a style="color:var(--accent2);cursor:pointer;font-weight:600" onclick="openUpgradeModal()">Upgrade to Pro for unlimited →</a>`;
+      return;
+    }
+    if (!res.ok) throw new Error(data.error || 'Server error');
+    const tips = data.tips || [];
+    container.innerHTML = `
+      <div style="background:rgba(0,165,114,0.06);border:1px solid rgba(0,165,114,0.15);border-radius:8px;padding:12px;margin-bottom:12px">
+        <div style="color:var(--accent);font-weight:600;margin-bottom:6px;font-size:13px">✂ ${data.pct_saved}% saved — ${data.tokens_saved} tokens removed</div>
+        <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);line-height:1.6">${data.compressed || ''}</div>
+        <button onclick="useCompressed('${(data.compressed||'').replace(/'/g,"\\'")}') " style="margin-top:8px;background:var(--accent);color:#fff;border:none;padding:5px 12px;border-radius:7px;font-size:12px;cursor:pointer">Use this →</button>
+      </div>
+      ${tips.map(t=>`<div class="tip"><span class="tip-icon">${t.icon||'💡'}</span><div class="tip-text"><strong>${t.issue||''}</strong>${t.saving?` — <span style="color:var(--accent)">${t.saving}</span>`:''}</div></div>`).join('')}`;
+    if (data.compressions_remaining !== 'unlimited') {
+      limitMsg.style.display = 'block';
+      limitMsg.textContent = `${data.compressions_remaining} free compressions remaining this month`;
+    }
+    await loadProfile();
+  } catch(err) {
+    container.innerHTML = `<div style="color:var(--warn);font-size:12px">${err.message}</div>`;
+  } finally {
+    btn.textContent = '✨ Analyze & Compress Prompt';
+    btn.disabled = false;
+  }
+}
+
+function useCompressed(text) {
+  document.getElementById('promptInput').value = text;
+  analyzePrompt();
+  showToast('✓ Compressed prompt applied');
+}
+
+// ── DASHBOARD ─────────────────────────────────
+async function loadDashboard() {
+  if (!currentUser) return;
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const { data: sessions } = await sb.from('sessions').select('*')
+    .eq('user_id', currentUser.id).gte('created_at', monthStart)
+    .order('created_at', { ascending: false }).limit(100);
+
+  if (!sessions || sessions.length === 0) {
+    document.getElementById('dash-tokens').textContent = '0';
+    document.getElementById('dash-spend').textContent = '$0.00';
+    document.getElementById('dash-avg').textContent = '$0.00';
+    document.getElementById('dash-count').textContent = '0';
+    document.getElementById('sessions-list').innerHTML = '<div style="padding:32px;text-align:center;color:var(--muted)">No sessions yet. Start using the Analyzer!</div>';
+    document.getElementById('dash-subtitle').textContent = `${now.toLocaleString('default',{month:'long',year:'numeric'})} — no data yet`;
+    renderChart([]);
+    return;
+  }
+
+  const totalTokens = sessions.reduce((s,x) => s+(x.tokens||0), 0);
+  const totalSpend = sessions.reduce((s,x) => s+(parseFloat(x.cost_gpt4o)||0), 0);
+  const avgCost = totalSpend / sessions.length;
+
+  document.getElementById('dash-tokens').textContent = fmtNum(totalTokens);
+  document.getElementById('dash-spend').textContent = '$' + totalSpend.toFixed(4);
+  document.getElementById('dash-avg').textContent = '$' + avgCost.toFixed(6);
+  document.getElementById('dash-count').textContent = sessions.length.toLocaleString();
+  document.getElementById('dash-subtitle').textContent = `${now.toLocaleString('default',{month:'long',year:'numeric'})} · ${sessions.length} prompts tracked`;
+
+  renderChart(sessions);
+  renderModelBreakdown(sessions);
+  renderSessions(sessions.slice(0, 20));
+}
+
+function renderChart(sessions) {
+  // Group by day
+  const days = {};
+  sessions.forEach(s => {
+    const day = new Date(s.created_at).toLocaleDateString('en',{month:'short',day:'numeric'});
+    days[day] = (days[day] || 0) + (s.tokens || 0);
+  });
+
+  const labels = Object.keys(days).slice(-14);
+  const values = labels.map(d => days[d] || 0);
+
+  const ctx = document.getElementById('usageChart').getContext('2d');
+  if (usageChartInstance) usageChartInstance.destroy();
+
+  const isDark = document.body.classList.contains('dark');
+  const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+  const textColor = isDark ? '#8a8880' : '#888880';
+
+  usageChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: 'rgba(0,165,114,0.7)',
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: 'DM Mono', size: 10 }}},
+        y: { grid: { color: gridColor }, ticks: { color: textColor, font: { family: 'DM Mono', size: 10 }}}
+      }
+    }
+  });
+}
+
+function renderModelBreakdown(sessions) {
+  const totals = { claude:0, gpt:0, gemini:0 };
+  sessions.forEach(s => {
+    const m = (s.model_used||'').toLowerCase();
+    if (m.includes('claude')) totals.claude += (s.tokens||0);
+    else if (m.includes('gpt')) totals.gpt += (s.tokens||0);
+    else totals.gemini += (s.tokens||0);
+  });
+  const total = totals.claude + totals.gpt + totals.gemini || 1;
+  const rows = [
+    { name:'Claude', tokens:totals.claude, color:'var(--claude)' },
+    { name:'GPT-4', tokens:totals.gpt, color:'var(--gpt)' },
+    { name:'Gemini', tokens:totals.gemini, color:'var(--gemini)' },
+  ].filter(r => r.tokens > 0);
+
+  document.getElementById('model-breakdown').innerHTML = rows.length ? rows.map(r => `
+    <div class="model-breakdown-row">
+      <div class="breakdown-name"><div class="model-dot" style="background:${r.color};width:10px;height:10px"></div>${r.name}</div>
+      <div class="breakdown-right">
+        <div class="breakdown-cost" style="color:${r.color}">${fmtNum(r.tokens)}</div>
+        <div class="breakdown-pct">${((r.tokens/total)*100).toFixed(0)}%</div>
+      </div>
+    </div>`).join('') : '<div style="color:var(--muted);font-size:13px">No data yet</div>';
+}
+
+function renderSessions(sessions) {
+  document.getElementById('sessions-list').innerHTML = sessions.map(s => {
+    const timeAgo = getTimeAgo(new Date(s.created_at));
+    const host = (s.source_url||'app').split('/')[0];
+    return `<div class="session-row">
+      <span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${s.tokens} tokens · ${s.words||0} words</span>
+      <span style="font-size:11px;color:var(--muted)">${host}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:13px">${(s.tokens||0).toLocaleString()}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--gpt)">${formatCost(s.cost_gpt4o)}</span>
+      <span style="color:var(--muted);font-size:12px">${timeAgo}</span>
+    </div>`;
+  }).join('');
+}
+
+function getTimeAgo(date) {
+  const m = Math.floor((Date.now()-date.getTime())/60000);
+  if (m < 1) return 'just now';
+  if (m < 60) return m+'m ago';
+  const h = Math.floor(m/60);
+  if (h < 24) return h+'h ago';
+  return Math.floor(h/24)+'d ago';
+}
+
+// ── CSV EXPORT ────────────────────────────────
+async function exportCSV() {
+  if (!currentUser) return;
+  const { data: sessions } = await sb.from('sessions').select('*')
+    .eq('user_id', currentUser.id).order('created_at', { ascending: false });
+  if (!sessions?.length) { showToast('No data to export'); return; }
+
+  const header = 'Date,Tokens,Words,Source,Model,Cost (GPT-4o),Cost (Claude Opus),Cost (Gemini Flash)\n';
+  const rows = sessions.map(s =>
+    `${new Date(s.created_at).toLocaleDateString()},${s.tokens||0},${s.words||0},${s.source_url||''},${s.model_used||''},${(s.cost_gpt4o||0).toFixed(8)},${(s.cost_claude_opus||0).toFixed(8)},${(s.cost_gemini_flash||0).toFixed(8)}`
+  ).join('\n');
+
+  const blob = new Blob([header + rows], { type:'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `tokenwise-export-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  showToast('✓ CSV downloaded');
+}
+
+// ── TEAM ──────────────────────────────────────
+async function inviteMember() {
+  const email = document.getElementById('invite-email').value.trim();
+  if (!email) return;
+  // In production this would send an invite email via your backend
+  // For now shows a confirmation
+  showToast(`✓ Invite sent to ${email}`);
+  document.getElementById('invite-email').value = '';
+}
+
+async function loadTeamData() {
+  if (!currentUser) return;
+  // Load team members from Supabase
+  const { data: members } = await sb.from('team_members')
+    .select('*, profiles(email, full_name)')
+    .limit(20);
+
+  const list = document.getElementById('team-members-list');
+  if (!members?.length) {
+    list.innerHTML = '<div style="padding:24px;text-align:center;color:var(--muted)">No team members yet. Invite someone!</div>';
+    return;
+  }
+
+  document.getElementById('team-member-count').textContent = members.length;
+  list.innerHTML = members.map(m => {
+    const name = m.profiles?.full_name || m.profiles?.email || 'Unknown';
+    const initial = name[0].toUpperCase();
+    return `<div style="display:grid;grid-template-columns:1fr auto;align-items:center;padding:14px 20px;border-bottom:1px solid var(--border)">
+      <div class="member-info">
+        <div class="member-avatar">${initial}</div>
+        <div><div class="member-name">${name}</div><div class="member-email">${m.profiles?.email||''}</div></div>
+      </div>
+      <span class="member-usage">${m.role}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── BUDGET ALERTS ─────────────────────────────
+async function saveBudgetAlert() {
+  const threshold = parseFloat(document.getElementById('alert-threshold').value);
+  await sb.from('budget_alerts').insert({
+    user_id: currentUser.id, threshold_usd: threshold,
+    period:'monthly', notify_email:true, triggered_at:null
+  });
+  showToast(`✓ Budget alert set for $${threshold}/month`);
+  loadBudgetAlerts();
+}
+
+async function loadBudgetAlerts() {
+  const { data: alerts } = await sb.from('budget_alerts')
+    .select('*').eq('user_id', currentUser.id);
+  const list = document.getElementById('alerts-list');
+  if (!alerts?.length) { list.innerHTML = '<div style="color:var(--muted);font-size:13px;margin-bottom:8px">No alerts set</div>'; return; }
+  list.innerHTML = alerts.map(a => `
+    <div class="alert-row">
+      <div class="alert-info">Alert at <strong>$${a.threshold_usd}</strong>/month<span>${a.triggered_at ? '⚠ Triggered ' + getTimeAgo(new Date(a.triggered_at)) : 'Active'}</span></div>
+      <button class="btn-remove-alert" onclick="removeAlert('${a.id}')">×</button>
+    </div>`).join('');
+}
+
+async function removeAlert(id) {
+  await sb.from('budget_alerts').delete().eq('id', id);
+  showToast('Alert removed');
+  loadBudgetAlerts();
+}
+
+// ── SETTINGS ──────────────────────────────────
+async function saveProfile() {
+  const name = document.getElementById('settings-name').value.trim();
+  const { error } = await sb.from('profiles').update({ full_name:name }).eq('id', currentUser.id);
+  if (!error) showToast('✓ Profile saved');
+}
+
+async function confirmDelete() {
+  if (confirm('Delete ALL your TokenWise data? This cannot be undone.')) {
+    await sb.from('sessions').delete().eq('user_id', currentUser.id);
+    await sb.from('compressions').delete().eq('user_id', currentUser.id);
+    showToast('Data deleted');
+  }
+}
+
+// ── UPGRADE ───────────────────────────────────
+function openUpgradeModal() { document.getElementById('upgrade-modal').classList.add('open'); }
+function closeUpgradeModal() { document.getElementById('upgrade-modal').classList.remove('open'); }
+function selectPlan(plan) {
+  selectedPlan = plan;
+  document.getElementById('plan-pro').classList.toggle('selected', plan==='pro');
+  document.getElementById('plan-agency').classList.toggle('selected', plan==='agency');
+}
+function goToCheckout() {
+  const email = currentUser?.email||'';
+  const url = selectedPlan === 'pro'
+    ? `${LEMON_PRO_LINK}?checkout[email]=${encodeURIComponent(email)}`
+    : `${LEMON_AGENCY_LINK}?checkout[email]=${encodeURIComponent(email)}`;
+  window.open(url,'_blank');
+  closeUpgradeModal();
+}
+
+// ── TABS ──────────────────────────────────────
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  const panel = document.getElementById('tab-'+tab);
+  if (!panel) return;
+  panel.classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (tab === 'dashboard') loadDashboard();
+  if (tab === 'team') loadTeamData();
+  if (tab === 'library') { loadLibrary(); loadLibraryConsent(); }
+  if (tab === 'context') { loadContextHistory(); loadActiveContext(); }
+}
+
+// ── FILE ANALYZER ────────────────────────────
+let extractedFileText = '';
+
+const FILE_ICONS = {
+  pdf: '📕', docx: '📘', doc: '📘', xlsx: '📗', xls: '📗',
+  csv: '📊', txt: '📄', md: '📝'
+};
+
+function getFileExt(name) {
+  return name.split('.').pop().toLowerCase();
+}
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1048576) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1048576).toFixed(1) + ' MB';
+}
+
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('file-drop-zone').classList.add('dragover');
+}
+
+function handleDragLeave(e) {
+  document.getElementById('file-drop-zone').classList.remove('dragover');
+}
+
+function handleFileDrop(e) {
+  e.preventDefault();
+  document.getElementById('file-drop-zone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+async function processFile(file) {
+  const ext = getFileExt(file.name);
+  const maxSize = 10 * 1024 * 1024; // 10MB limit
+
+  if (file.size > maxSize) {
+    showToast('File too large. Max 10MB.'); return;
+  }
+
+  // Show processing state
+  document.getElementById('file-upload-zone').style.display = 'none';
+  document.getElementById('file-processing').classList.add('show');
+  document.getElementById('file-result').classList.remove('show');
+
+  try {
+    let text = '';
+    let pages = null;
+
+    if (ext === 'pdf') {
+      const result = await extractPDF(file);
+      text = result.text;
+      pages = result.pages;
+    } else if (ext === 'docx' || ext === 'doc') {
+      text = await extractDocx(file);
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      text = await extractExcel(file);
+    } else if (ext === 'csv') {
+      text = await extractCSV(file);
+    } else if (ext === 'txt' || ext === 'md') {
+      text = await extractText(file);
+    } else {
+      showToast('Unsupported file type.'); resetFileUpload(); return;
+    }
+
+    extractedFileText = text;
+    displayFileResults(file, text, pages);
+
+  } catch (err) {
+    console.error('File parse error:', err);
+    showToast('Could not read file. Try a different format.');
+    resetFileUpload();
+  }
+}
+
+async function extractPDF(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let fullText = '';
+  for (let i = 1; i <= pdf.numPages; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    fullText += content.items.map(item => item.str).join(' ') + '
+';
+  }
+  return { text: fullText.trim(), pages: pdf.numPages };
+}
+
+async function extractDocx(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const result = await mammoth.extractRawText({ arrayBuffer });
+  return result.value.trim();
+}
+
+async function extractExcel(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+  let fullText = '';
+  workbook.SheetNames.forEach(sheetName => {
+    const sheet = workbook.Sheets[sheetName];
+    const csv = XLSX.utils.sheet_to_csv(sheet);
+    fullText += `Sheet: ${sheetName}
+${csv}
+
+`;
+  });
+  return fullText.trim();
+}
+
+async function extractCSV(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result.trim());
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+async function extractText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result.trim());
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+function displayFileResults(file, text, pages) {
+  const ext = getFileExt(file.name);
+  const tokens = countTokens(text);
+  const words = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+
+  // Update file info
+  document.getElementById('file-icon').textContent = FILE_ICONS[ext] || '📄';
+  document.getElementById('file-name').textContent = file.name;
+  document.getElementById('file-size').textContent = formatFileSize(file.size) + ' · ' + ext.toUpperCase();
+  document.getElementById('file-tokens').textContent = fmtNum(tokens);
+  document.getElementById('file-words').textContent = fmtNum(words);
+  document.getElementById('file-pages').textContent = pages || '—';
+
+  // Cost comparison
+  const costs = [
+    { name: 'Claude 3 Opus',  per1M: 15,   color: 'var(--claude)' },
+    { name: 'Claude Sonnet',  per1M: 3,    color: 'var(--claude)' },
+    { name: 'GPT-4o',         per1M: 5,    color: 'var(--gpt)'    },
+    { name: 'Gemini 1.5 Pro', per1M: 3.5,  color: 'var(--gemini)' },
+    { name: 'Gemini Flash',   per1M: 0.35, color: 'var(--gemini)' },
+  ];
+
+  const costsHtml = costs.map(c => {
+    const cost = (tokens / 1e6) * c.per1M;
+    return `<div class="file-cost-row">
+      <span style="color:${c.color};font-size:12px">${c.name}</span>
+      <span style="font-family:'DM Mono',monospace;font-weight:600;font-size:13px">${formatCost(cost)}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('file-costs').innerHTML = costsHtml;
+
+  // Show result
+  document.getElementById('file-processing').classList.remove('show');
+  document.getElementById('file-result').classList.add('show');
+  document.getElementById('file-result-tab').style.display = 'block';
+  switchFileTab('result', document.querySelector('.file-tab:last-child'));
+
+  showToast(`✓ ${file.name} — ${fmtNum(tokens)} tokens`);
+}
+
+function useFileInAnalyzer() {
+  if (!extractedFileText) return;
+  // Truncate to 50K chars to avoid overwhelming the textarea
+  const truncated = extractedFileText.substring(0, 50000);
+  document.getElementById('promptInput').value = truncated;
+  analyzePrompt();
+  // Switch to analyzer view
+  switchTab('analyzer', document.querySelector('nav button.active'));
+  showToast('✓ File content loaded into Analyzer');
+  // Scroll to textarea
+  document.getElementById('promptInput').scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetFileUpload() {
+  extractedFileText = '';
+  document.getElementById('file-upload-zone').style.display = 'block';
+  document.getElementById('file-processing').classList.remove('show');
+  document.getElementById('file-result').classList.remove('show');
+  document.getElementById('file-result-tab').style.display = 'none';
+  document.getElementById('file-input').value = '';
+  switchFileTab('upload', document.querySelector('.file-tab:first-child'));
+}
+
+function switchFileTab(tab, btn) {
+  document.querySelectorAll('.file-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  if (tab === 'upload') {
+    document.getElementById('file-upload-zone').style.display = 'block';
+    document.getElementById('file-result').classList.remove('show');
+  } else {
+    document.getElementById('file-upload-zone').style.display = 'none';
+    document.getElementById('file-result').classList.add('show');
+  }
+}
+
+// ── THEME ─────────────────────────────────────
+function toggleTheme() {
+  const isDark = document.body.classList.toggle('dark');
+  document.getElementById('theme-toggle').textContent = isDark ? '🌙' : '☀️';
+  localStorage.setItem('tw_theme', isDark ? 'dark' : 'light');
+  // Redraw chart with new colors
+  if (usageChartInstance) loadDashboard();
+}
+
+function initTheme() {
+  if (localStorage.getItem('tw_theme') === 'dark') {
+    document.body.classList.add('dark');
+    const btn = document.getElementById('theme-toggle');
+    if (btn) btn.textContent = '🌙';
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') { closeUpgradeModal(); closeOnboarding(); }
+});
+
+// ── PASSWORD RESET ────────────────────────────
+function showReset() {
+  document.getElementById('auth-login').style.display = 'none';
+  document.getElementById('auth-reset').style.display = 'block';
+}
+function showLogin() {
+  document.getElementById('auth-signup').style.display = 'none';
+  document.getElementById('auth-reset').style.display = 'none';
+  document.getElementById('auth-login').style.display = 'block';
+}
+async function sendReset() {
+  const email = document.getElementById('reset-email').value.trim();
+  const errEl = document.getElementById('reset-error');
+  errEl.style.display = 'none';
+  if (!email) { showErr(errEl, 'Please enter your email.'); return; }
+  // Use Supabase built-in password reset (secure, time-limited token)
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href
+  });
+  if (error) {
+    showErr(errEl, error.message);
+  } else {
+    errEl.style.background = 'rgba(0,165,114,0.1)';
+    errEl.style.borderColor = 'rgba(0,165,114,0.3)';
+    errEl.style.color = 'var(--accent)';
+    showErr(errEl, '✓ Reset link sent! Check your email.');
+  }
+}
+
+// ── ONBOARDING ────────────────────────────────
+function showOnboarding() {
+  document.getElementById('onboard-modal').classList.add('open');
+}
+function closeOnboarding() {
+  document.getElementById('onboard-modal').classList.remove('open');
+  localStorage.setItem('tw_onboarded', '1');
+}
+function checkOnboarding() {
+  if (!localStorage.getItem('tw_onboarded')) {
+    setTimeout(showOnboarding, 1000);
+  }
+}
+
+// ── MOBILE NAV SYNC ───────────────────────────
+function syncMobileNav(btn) {
+  document.querySelectorAll('.mobile-nav button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+init();
+checkOnboarding();
+
+// ══════════════════════════════════════════════════════════════
+// PROMPT LIBRARY
+// ══════════════════════════════════════════════════════════════
+let libAllPrompts = [], libFiltered = [], libCurrentCat = 'all', libCurrentSort = 'use_count', libLoaded = false, libSuggestionCat = 'code';
+let libSearchTimer;
+
+async function loadLibrary() {
+  if (libLoaded) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const res = await fetch(`${NETLIFY_BASE}/prompt-library?action=library&limit=100`, { headers: { Authorization: `Bearer ${session.access_token}` } });
+    const data = await res.json();
+    libAllPrompts = data.prompts || [];
+    libFiltered = [...libAllPrompts];
+    libLoaded = true;
+    libApplySortAndRender(libCurrentSort);
+    libFetchStats(session.access_token);
+  } catch(e) { console.error('[library]', e); }
+}
+
+async function libFetchStats(token) {
+  try {
+    const res = await fetch(`${NETLIFY_BASE}/prompt-library?action=stats`, { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    document.getElementById('lib-stat-total').textContent = (data.total||0).toLocaleString();
+    document.getElementById('lib-stat-uses').textContent = (data.totalUses||0).toLocaleString();
+    document.getElementById('lib-stat-saved').textContent = '$'+(data.totalSaved||0).toFixed(4);
+    const top = Object.entries(data.byCategory||{}).sort((a,b)=>b[1]-a[1])[0];
+    if (top && top[1] >= 5) {
+      libSuggestionCat = top[0];
+      document.getElementById('lib-suggestion').style.display = 'flex';
+      document.getElementById('lib-suggestion-title').textContent = `You have ${top[1]} ${top[0]} prompts`;
+      document.getElementById('lib-suggestion-sub').textContent = 'Your most common type — click to filter';
+    }
+  } catch(e) {}
+}
+
+function libFilterCategory(cat) {
+  libCurrentCat = cat;
+  document.getElementById('lib-category').value = cat;
+  if (cat === 'pinned') libFiltered = libAllPrompts.filter(p => p.is_pinned);
+  else if (cat === 'all') libFiltered = [...libAllPrompts];
+  else libFiltered = libAllPrompts.filter(p => p.category === cat);
+  libApplySortAndRender(libCurrentSort);
+}
+
+function libApplySortAndRender(sort) {
+  libCurrentSort = sort;
+  libFiltered.sort((a,b) => {
+    if (sort === 'use_count') return (b.use_count||0)-(a.use_count||0);
+    if (sort === 'last_used_at') return new Date(b.last_used_at||0)-new Date(a.last_used_at||0);
+    return new Date(b.created_at||0)-new Date(a.created_at||0);
+  });
+  libRender();
+}
+
+function libSearch(val) {
+  clearTimeout(libSearchTimer);
+  if (!val.trim()) { libFiltered = [...libAllPrompts]; libApplySortAndRender(libCurrentSort); return; }
+  libSearchTimer = setTimeout(() => {
+    libFiltered = libAllPrompts.filter(p => (p.title||'').toLowerCase().includes(val.toLowerCase()) || (p.original_text||'').toLowerCase().includes(val.toLowerCase()));
+    libRender();
+  }, 250);
+}
+
+const LIB_CAT_COLORS = { code:'#6d55e8', writing:'#00a572', analysis:'#e05a1a', qa:'#2a72c8', data:'#b8832a', creative:'#9333ea', general:'#888880' };
+
+function libRender() {
+  const grid = document.getElementById('lib-grid');
+  if (!libFiltered.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--muted)"><div style="font-size:36px;margin-bottom:8px">🔍</div><div style="font-weight:700;font-size:15px;margin-bottom:4px">No prompts found</div></div>';
+    return;
+  }
+  grid.innerHTML = libFiltered.map(p => {
+    const color = LIB_CAT_COLORS[p.category]||'#888';
+    const preview = (p.original_text||'').replace(/```[\s\S]*?```/g,'[code]').substring(0,90);
+    return `<div onclick="libOpenDetail('${p.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden" onmouseover="this.style.boxShadow='0 4px 16px rgba(0,0,0,.1)';this.style.borderColor='${color}'" onmouseout="this.style.boxShadow='';this.style.borderColor='var(--border)'">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,${color},transparent)"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${color}18;color:${color};border:1px solid ${color}33;font-family:'DM Mono',monospace;text-transform:uppercase">${p.category||'general'}</span>
+        <span style="font-size:18px;font-weight:800;color:var(--accent);font-family:'Syne',sans-serif">×${p.use_count||1}</span>
+      </div>
+      <div style="font-weight:700;font-size:13px;margin-bottom:6px;line-height:1.4">${escLib(p.title||'Untitled')}</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${escLib(preview)}${preview.length>=90?'…':''}</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">
+        ${p.best_model?`<span>🤖 ${p.best_model.replace('claude-3-','')}</span>`:''}
+        ${p.avg_tokens?`<span>~${(p.avg_tokens/1000).toFixed(1)}K tok</span>`:''}
+        ${p.avg_cost_usd?`<span style="margin-left:auto;color:var(--accent)">$${(p.avg_cost_usd*(p.use_count||1)).toFixed(4)}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function libOpenDetail(id) {
+  const p = libAllPrompts.find(x=>x.id===id); if(!p) return;
+  const color = LIB_CAT_COLORS[p.category]||'#888';
+  const saving = p.compressed_text ? Math.round((1-p.compressed_text.length/(p.original_text||'').length)*100) : null;
+  const noText = !p.original_text || p.original_text.startsWith('[structure');
+  document.getElementById('onboarding-modal').style.display='flex';
+  document.getElementById('onboarding-modal').innerHTML = `
+<div style="background:var(--surface);border-radius:20px;padding:28px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;position:relative">
+  <button onclick="document.getElementById('onboarding-modal').style.display='none'" style="position:absolute;top:14px;right:14px;background:var(--surface2);border:1px solid var(--border);width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:14px;color:var(--muted)">×</button>
+  <div style="font-weight:800;font-size:18px;font-family:'Syne',sans-serif;margin-bottom:6px">${escLib(p.title||'Untitled')}</div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+    <span style="font-size:10px;padding:3px 8px;border-radius:10px;background:${color}18;color:${color};border:1px solid ${color}33;font-family:'DM Mono',monospace;text-transform:uppercase">${p.category}</span>
+    ${p.intent?`<span style="font-size:10px;padding:3px 8px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-family:'DM Mono',monospace">${p.intent}</span>`:''}
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Syne',sans-serif">${p.use_count||1}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">uses</div></div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Syne',sans-serif">${p.avg_tokens?(p.avg_tokens/1000).toFixed(1)+'K':'—'}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">avg tokens</div></div>
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--accent);font-family:'Syne',sans-serif">${p.avg_cost_usd?'$'+((p.avg_cost_usd*(p.use_count||1)).toFixed(4)):'—'}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px">total spent</div></div>
+  </div>
+  ${p.best_model?`<div style="font-size:12px;color:var(--muted);margin-bottom:12px">🤖 Best model: <strong style="color:var(--text)">${p.best_model}</strong></div>`:''}
+  <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Prompt</div>
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word;margin-bottom:12px;max-height:180px;overflow-y:auto">${escLib(p.original_text||'[Enable training consent to save full prompt text]')}</div>
+  ${p.compressed_text?`<div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Best compressed ${saving?'('+saving+'% shorter)':''}</div><div style="background:rgba(0,165,114,.04);border:1px solid rgba(0,165,114,.25);border-radius:10px;padding:14px;font-size:13px;line-height:1.7;white-space:pre-wrap;word-break:break-word;margin-bottom:12px;max-height:160px;overflow-y:auto">${escLib(p.compressed_text)}</div>`:''}
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    ${!noText?`<button onclick="libLoadIntoAnalyzer('${id}')" style="padding:9px 16px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700;cursor:pointer;font-family:inherit;font-size:13px">Load into Analyzer →</button>`:''}
+    ${!noText?`<button onclick="libCopy('${id}')" style="padding:9px 16px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-family:inherit;font-size:13px">Copy</button>`:''}
+    <button onclick="libTogglePin('${id}',${p.is_pinned})" style="padding:9px 16px;border-radius:9px;border:1px solid var(--border);background:var(--surface2);color:var(--text);cursor:pointer;font-family:inherit;font-size:13px">${p.is_pinned?'Unpin':'📌 Pin'}</button>
+    <button onclick="libDelete('${id}')" style="padding:9px 16px;border-radius:9px;border:1px solid rgba(220,38,38,.3);background:transparent;color:#dc2626;cursor:pointer;font-family:inherit;font-size:13px">Delete</button>
+  </div>
+</div>`;
+}
+
+function libLoadIntoAnalyzer(id) {
+  const p = libAllPrompts.find(x=>x.id===id); if(!p) return;
+  const txt = p.compressed_text||p.original_text; if(!txt||txt.startsWith('[')) return;
+  const ta = document.getElementById('prompt-input');
+  if(ta){ta.value=txt;ta.dispatchEvent(new Event('input'));}
+  document.getElementById('onboarding-modal').style.display='none';
+  switchTab('analyzer', document.querySelector('nav button'));
+  showToast('✓ Loaded into analyzer');
+}
+function libCopy(id) { const p=libAllPrompts.find(x=>x.id===id); if(!p)return; navigator.clipboard.writeText(p.compressed_text||p.original_text||'').then(()=>showToast('✓ Copied')); }
+async function libTogglePin(id,cur) {
+  const p=libAllPrompts.find(x=>x.id===id); if(!p)return; p.is_pinned=!cur;
+  const {data:{session}}=await sb.auth.getSession();
+  await fetch(`${NETLIFY_BASE}/prompt-library`,{method:'PATCH',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({id,is_pinned:!cur})});
+  document.getElementById('onboarding-modal').style.display='none';
+  libRender(); showToast(!cur?'📌 Pinned':'Unpinned');
+}
+async function libDelete(id) {
+  if(!confirm('Remove from library?'))return;
+  const {data:{session}}=await sb.auth.getSession();
+  await fetch(`${NETLIFY_BASE}/prompt-library?id=${id}`,{method:'DELETE',headers:{Authorization:`Bearer ${session.access_token}`}});
+  libAllPrompts=libAllPrompts.filter(p=>p.id!==id); libFiltered=libFiltered.filter(p=>p.id!==id);
+  document.getElementById('onboarding-modal').style.display='none';
+  libRender(); showToast('✓ Removed');
+}
+async function toggleTrainingConsent(val) {
+  const {data:{session}}=await sb.auth.getSession(); if(!session)return;
+  await sb.from('profiles').update({training_consent:val,consent_date:val?new Date().toISOString():null}).eq('id',session.user.id);
+  // Update slider color
+  const slider = document.getElementById('lib-consent-slider');
+  if(slider) slider.style.background = val ? 'var(--accent)' : '';
+  showToast(val?'✓ Contributing to training — thank you!':'Training contribution disabled');
+}
+async function loadLibraryConsent() {
+  const {data:{session}}=await sb.auth.getSession(); if(!session)return;
+  const {data}=await sb.from('profiles').select('training_consent').eq('id',session.user.id).single();
+  const toggle=document.getElementById('lib-consent-toggle');
+  const slider=document.getElementById('lib-consent-slider');
+  if(toggle&&data){toggle.checked=!!data.training_consent; if(slider)slider.style.background=data.training_consent?'var(--accent)':'';}
+}
+function escLib(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ══════════════════════════════════════════════════════════════
+// CONTEXT PORTABILITY
+// ══════════════════════════════════════════════════════════════
+let activeContextId = null;
+
+async function loadActiveContext() {
+  try {
+    const {data:{session}}=await sb.auth.getSession(); if(!session)return;
+    const res=await fetch(`${NETLIFY_BASE}/context-portability?action=get`,{headers:{Authorization:`Bearer ${session.access_token}`}});
+    const data=await res.json();
+    const el=document.getElementById('ctx-status');
+    if(data.context){
+      activeContextId=data.context.id;
+      const age=Math.round((Date.now()-new Date(data.context.created_at))/60000);
+      el.innerHTML=`
+<div style="background:rgba(0,165,114,.06);border:1px solid rgba(0,165,114,.2);border-radius:12px;padding:16px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite"></div>
+      <strong style="font-size:13px">${data.context.site}</strong>
+      <span style="font-size:11px;color:var(--muted);font-family:'DM Mono',monospace">${data.context.model_used||''}</span>
+    </div>
+    <span style="font-size:11px;color:var(--muted)">${age}m ago · ${data.context.summary_tokens||0} tokens · expires in ${Math.round((new Date(Date.now()+86400000)-new Date(data.context.created_at))/3600000)}h</span>
+  </div>
+  <div style="font-size:13px;line-height:1.7;color:var(--text);background:var(--surface2);border-radius:8px;padding:12px;margin-bottom:10px;max-height:120px;overflow-y:auto">${escLib(data.context.context_summary)}</div>
+  <div style="display:flex;gap:8px">
+    <button onclick="copyContextForInjection()" style="padding:8px 14px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700;cursor:pointer;font-size:12px">📋 Copy for injection</button>
+    <button onclick="markContextUsed()" style="padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--muted);cursor:pointer;font-size:12px">Mark as used</button>
+  </div>
+</div>`;
+    } else {
+      el.innerHTML='<div style="text-align:center;padding:32px;color:var(--muted)"><div style="font-size:32px;margin-bottom:8px">💬</div><div style="font-weight:600;margin-bottom:4px">No active context</div><div style="font-size:12px">Complete a session or save a conversation below</div></div>';
+    }
+  } catch(e){console.error('[ctx]',e);}
+}
+
+async function loadContextHistory() {
+  try {
+    const {data:{session}}=await sb.auth.getSession(); if(!session)return;
+    loadActiveContext();
+    const {data,error}=await sb.from('context_sessions').select('id,site,model_used,context_summary,summary_tokens,created_at,was_reused,reused_on_site').eq('user_id',session.user.id).order('created_at',{ascending:false}).limit(10);
+    const el=document.getElementById('ctx-history');
+    if(!data||!data.length){el.innerHTML='<div style="color:var(--muted);font-size:13px">No context history yet.</div>';return;}
+    el.innerHTML=data.map(c=>{
+      const age=Math.round((Date.now()-new Date(c.created_at))/60000);
+      return `<div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)">
+        <div style="width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;background:${c.was_reused?'var(--muted)':'var(--accent)'}"></div>
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+            <strong style="font-size:12px">${c.site}</strong>
+            <span style="font-size:10px;color:var(--muted);font-family:'DM Mono',monospace">${c.model_used||''}</span>
+            ${c.was_reused?`<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:var(--surface2);color:var(--muted)">used on ${c.reused_on_site||'another model'}</span>`:''}
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${escLib(c.context_summary)}</div>
+          <div style="font-size:10px;color:var(--muted2,#b0aca6);margin-top:4px;font-family:'DM Mono',monospace">${age}m ago · ${c.summary_tokens||0} tokens</div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){console.error('[ctx history]',e);}
+}
+
+async function saveContextManually() {
+  const txt=document.getElementById('ctx-input').value.trim();
+  const site=document.getElementById('ctx-site').value;
+  const model=document.getElementById('ctx-model').value;
+  if(!txt){showToast('Paste a conversation first');return;}
+  const {data:{session}}=await sb.auth.getSession(); if(!session){showToast('Sign in first');return;}
+  const btn=document.querySelector('[onclick="saveContextManually()"]');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try {
+    const res=await fetch(`${NETLIFY_BASE}/context-portability?action=save`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({conversation_text:txt,site,model_used:model,token_count:txt.length/4|0})});
+    const data=await res.json();
+    if(data.ok){
+      document.getElementById('ctx-result').style.display='block';
+      document.getElementById('ctx-token-count').textContent=data.summary_tokens||'~150';
+      activeContextId=data.id;
+      // Fetch the summary to display
+      await loadActiveContext();
+      showToast('✓ Context saved — valid for 24 hours');
+      document.getElementById('ctx-input').value='';
+    } else { showToast('Error saving context'); }
+  } catch(e){ showToast('Network error'); }
+  finally { if(btn){btn.disabled=false;btn.textContent='Save Context →';} }
+}
+
+function copyContextForInjection() {
+  const summary=document.querySelector('#ctx-status .context-summary-text')?.textContent || document.querySelector('#ctx-status div[style*="font-size:13px"]')?.textContent;
+  if(!summary){showToast('No context to copy');return;}
+  const injectionText=`[Context from previous session: ${summary}]
+
+`;
+  navigator.clipboard.writeText(injectionText).then(()=>showToast('✓ Copied — paste at the start of your next prompt'));
+}
+
+async function markContextUsed() {
+  if(!activeContextId)return;
+  const {data:{session}}=await sb.auth.getSession(); if(!session)return;
+  await fetch(`${NETLIFY_BASE}/context-portability?action=mark`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({id:activeContextId,reused_on_site:'manual'})});
+  activeContextId=null;
+  loadActiveContext();
+  showToast('✓ Marked as used');
+}
+
+function copyContextSummary() {
+  const txt=document.getElementById('ctx-summary-text')?.textContent;
+  if(txt) navigator.clipboard.writeText(txt).then(()=>showToast('✓ Copied'));
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TokenWise</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f5f5f2; --surface:#ffffff; --surface2:#f0f0ed;
+  --border:rgba(0,0,0,0.08); --accent:#00a572; --accent2:#6d55e8;
+  --warn:#e05a1a; --text:#1a1a1a; --muted:#888880;
+  --claude:#b8832a; --gpt:#2a9a6a; --gemini:#2a72c8;
+}
+body.dark {
+  --bg:#111110; --surface:#1a1a18; --surface2:#222220;
+  --border:rgba(255,255,255,0.1); --accent:#00d68f; --accent2:#a78bfa;
+  --warn:#fb923c; --text:#f0ede8; --muted:#8a8880;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;width:320px;min-height:200px;font-size:13px}
+
+/* HEADER */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px}
+.logo-icon{width:24px;height:24px;background:linear-gradient(135deg,#00a572,#6d55e8);border-radius:6px;display:flex;align-items:center;justify-content:center}
+.logo em{color:var(--accent);font-style:normal}
+.header-right{display:flex;align-items:center;gap:6px}
+.theme-btn{background:none;border:none;cursor:pointer;font-size:14px;width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:background .15s}
+.theme-btn:hover{background:var(--surface2)}
+.version{font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);padding:2px 6px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)}
+
+/* TABS */
+.tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px}
+.tab{background:none;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;padding:8px 10px;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;font-weight:500}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab:hover:not(.active){color:var(--text)}
+
+/* TAB CONTENT */
+.tab-panel{display:none;padding:16px}
+.tab-panel.active{display:block}
+
+/* AUTH */
+.auth-section{padding:20px 16px}
+.auth-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;margin-bottom:4px}
+.auth-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px;letter-spacing:.8px;text-transform:uppercase}
+.field input{width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--accent)}
+.btn-primary{width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;cursor:pointer;transition:opacity .15s}
+.btn-primary:hover{opacity:.9}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.auth-switch{text-align:center;font-size:12px;color:var(--muted);margin-top:12px}
+.auth-switch a{color:var(--accent);cursor:pointer;font-weight:600}
+.auth-error{background:rgba(224,90,26,.1);border:1px solid rgba(224,90,26,.2);border-radius:7px;padding:8px 12px;font-size:12px;color:var(--warn);margin-bottom:12px;display:none}
+.divider{display:flex;align-items:center;gap:8px;margin:12px 0;color:var(--muted);font-size:11px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* LOGGED IN - TODAY STATS */
+.today-section{}
+.today-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;position:relative;overflow:hidden}
+.stat-card::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),transparent)}
+.stat-card:nth-child(2)::after{background:linear-gradient(90deg,var(--accent2),transparent)}
+.stat-card:nth-child(3)::after{background:linear-gradient(90deg,var(--warn),transparent)}
+.stat-card:nth-child(4)::after{background:linear-gradient(90deg,var(--claude),transparent)}
+.stat-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;font-family:'DM Mono',monospace;margin-bottom:4px}
+.stat-value{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;letter-spacing:-0.8px;color:var(--text)}
+.stat-sub{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* SITE STATUS */
+.site-status{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:12px}
+.site-status-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-family:'DM Mono',monospace;margin-bottom:8px}
+.site-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)}
+.site-row:last-child{border:none}
+.site-name{display:flex;align-items:center;gap:6px;font-size:12px}
+.site-dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.site-dot.active{background:var(--accent)}
+.toggle{position:relative;width:28px;height:16px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--surface2);border-radius:8px;transition:.2s;border:1px solid var(--border)}
+.toggle-slider::before{content:'';position:absolute;width:12px;height:12px;left:1px;top:1px;background:var(--muted);border-radius:50%;transition:.2s}
+.toggle input:checked + .toggle-slider{background:var(--accent)}
+.toggle input:checked + .toggle-slider::before{transform:translateX(12px);background:#fff}
+
+/* SYNC STATUS */
+.sync-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);padding:8px 0;border-top:1px solid var(--border);margin-top:4px}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-dot.offline{background:var(--warn);animation:none}
+
+/* SETTINGS */
+.settings-group{margin-bottom:16px}
+.settings-group-title{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-family:'DM Mono',monospace;margin-bottom:8px}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border:none}
+.settings-row label{font-size:12px;color:var(--text)}
+.settings-row .settings-sub{font-size:10px;color:var(--muted);margin-top:1px}
+select.settings-select{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:11px;padding:4px 8px;outline:none;cursor:pointer;font-family:'DM Sans',sans-serif}
+input.budget-input{width:70px;padding:5px 8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:12px;font-family:'DM Mono',monospace;outline:none;text-align:right}
+input.budget-input:focus{border-color:var(--accent)}
+
+/* USER ROW */
+.user-row{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:12px}
+.user-info{display:flex;align-items:center;gap:8px}
+.user-avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:white}
+.user-name{font-size:12px;font-weight:600}
+.user-email{font-size:10px;color:var(--muted)}
+.plan-badge{font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:10px;background:rgba(0,165,114,.1);color:var(--accent);border:1px solid rgba(0,165,114,.25)}
+.btn-signout{background:none;border:1px solid var(--border);color:var(--muted);padding:5px 10px;border-radius:7px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-signout:hover{border-color:var(--warn);color:var(--warn)}
+
+/* OPEN APP */
+.open-app-row{display:flex;gap:8px;margin-top:4px}
+.btn-open-app{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:8px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;text-align:center;transition:all .15s;font-family:'DM Sans',sans-serif}
+.btn-open-app:hover{border-color:var(--accent);color:var(--accent)}
+.btn-open-app.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;font-family:'Syne',sans-serif;font-weight:700}
+.btn-open-app.primary:hover{opacity:.9}
+
+/* PENDING SYNC */
+.pending-badge{background:rgba(224,90,26,.1);border:1px solid rgba(224,90,26,.2);border-radius:6px;padding:6px 10px;font-size:11px;color:var(--warn);display:none;margin-bottom:8px;align-items:center;gap:6px}
+.pending-badge.show{display:flex}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px;gap:10px;color:var(--muted);font-size:12px}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TOAST */
+.toast{position:fixed;bottom:12px;left:12px;right:12px;background:var(--text);color:var(--bg);padding:10px 14px;border-radius:9px;font-size:12px;font-weight:500;z-index:999;transform:translateY(60px);opacity:0;transition:all .25s;pointer-events:none}
+.toast.show{transform:translateY(0);opacity:1}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M4 10L7 4L10 10" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    Token<em>Wise</em>
+  </div>
+  <div class="header-right">
+    <button class="theme-btn" id="theme-btn" title="Toggle theme">🌙</button>
+    <span class="version" id="version-badge">v1.0.0</span>
+  </div>
+</div>
+
+<!-- LOADING STATE -->
+<div class="loading" id="loading-state">
+  <div class="spinner"></div>
+  <span>Loading…</span>
+</div>
+
+<!-- AUTH STATE (shown when not logged in) -->
+<div id="auth-state" style="display:none">
+  <div class="auth-section">
+    <div id="auth-login">
+      <div class="auth-title">Sign in to TokenWise</div>
+      <div class="auth-sub">Sync your usage across devices and access your dashboard.</div>
+      <div id="auth-error" class="auth-error"></div>
+      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"></div>
+      <div class="field"><label>Password</label><input type="password" id="login-password" placeholder="Your password" autocomplete="current-password"></div>
+      <button class="btn-primary" id="btn-login">Sign in</button>
+      <div class="auth-switch">No account? <a id="show-signup">Create one →</a></div>
+      <div class="auth-switch" style="margin-top:6px"><a id="show-reset" style="font-size:11px">Forgot password?</a></div>
+    </div>
+    <div id="auth-signup" style="display:none">
+      <div class="auth-title">Create account</div>
+      <div class="auth-sub">Free plan — no credit card needed.</div>
+      <div id="signup-error" class="auth-error"></div>
+      <div class="field"><label>Full name</label><input type="text" id="signup-name" placeholder="Jane Smith" autocomplete="name"></div>
+      <div class="field"><label>Email</label><input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email"></div>
+      <div class="field"><label>Password</label><input type="password" id="signup-password" placeholder="Min 8 characters" autocomplete="new-password"></div>
+      <button class="btn-primary" id="btn-signup">Create account</button>
+      <div class="auth-switch">Have an account? <a id="show-login">Sign in →</a></div>
+    </div>
+    <div id="auth-reset" style="display:none">
+      <div class="auth-title">Reset password</div>
+      <div class="auth-sub">We'll send you a link to reset your password.</div>
+      <div id="reset-error" class="auth-error"></div>
+      <div class="field"><label>Email</label><input type="email" id="reset-email" placeholder="you@example.com"></div>
+      <button class="btn-primary" id="btn-reset">Send reset link</button>
+      <div class="auth-switch"><a id="back-to-login">← Back to sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGGED IN STATE -->
+<div id="app-state" style="display:none">
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="today">Today</button>
+    <button class="tab" data-tab="settings">Settings</button>
+  </div>
+
+  <!-- TODAY TAB -->
+  <div class="tab-panel active" id="tab-today">
+
+    <!-- User row -->
+    <div class="user-row" style="margin-top:0;border-radius:0;border-left:none;border-right:none;border-top:none;margin-bottom:0;padding:10px 16px">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">JD</div>
+        <div>
+          <div class="user-name" id="user-name">Jane Doe</div>
+          <div class="user-email" id="user-email">jane@example.com</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="plan-badge" id="plan-badge">FREE</span>
+        <button class="btn-signout" id="btn-signout">Sign out</button>
+      </div>
+    </div>
+
+    <div style="padding:12px 16px">
+
+      <!-- Pending sync warning -->
+      <div class="pending-badge" id="pending-badge">
+        <span>⚠️</span><span id="pending-text">Sessions pending sync</span>
+      </div>
+
+      <!-- Today stats -->
+      <div class="today-grid">
+        <div class="stat-card">
+          <div class="stat-label">Tokens today</div>
+          <div class="stat-value" id="stat-tokens-today">0</div>
+          <div class="stat-sub" id="stat-sessions-today">0 sessions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cost today</div>
+          <div class="stat-value" id="stat-cost-today">$0.00</div>
+          <div class="stat-sub">estimated</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total tokens</div>
+          <div class="stat-value" id="stat-tokens-total">0</div>
+          <div class="stat-sub">all time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total spend</div>
+          <div class="stat-value" id="stat-cost-total">$0.00</div>
+          <div class="stat-sub">all time</div>
+        </div>
+      </div>
+
+      <!-- Site toggles -->
+      <div class="site-status">
+        <div class="site-status-title">Widget active on</div>
+        <div class="site-row">
+          <div class="site-name"><div class="site-dot active" id="dot-claude"></div> Claude.ai</div>
+          <label class="toggle"><input type="checkbox" id="toggle-claude" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="site-row">
+          <div class="site-name"><div class="site-dot active" id="dot-chatgpt"></div> ChatGPT</div>
+          <label class="toggle"><input type="checkbox" id="toggle-chatgpt" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="site-row">
+          <div class="site-name"><div class="site-dot active" id="dot-gemini"></div> Gemini</div>
+          <label class="toggle"><input type="checkbox" id="toggle-gemini" checked><span class="toggle-slider"></span></label>
+        </div>
+      </div>
+
+      <!-- Sync status -->
+      <div class="sync-row">
+        <div class="sync-dot" id="sync-dot"></div>
+        <span id="sync-status">Syncing to dashboard</span>
+      </div>
+
+      <!-- Open app -->
+      <div class="open-app-row" style="margin-top:10px">
+        <button class="btn-open-app" id="btn-open-dashboard">📊 Dashboard</button>
+        <button class="btn-open-app primary" id="btn-open-analyzer">Open App →</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SETTINGS TAB -->
+  <div class="tab-panel" id="tab-settings">
+    <div style="padding:12px 16px">
+
+      <div class="settings-group">
+        <div class="settings-group-title">Widget</div>
+        <div class="settings-row">
+          <div><div>Show widget</div><div class="settings-sub">Display token counter on AI sites</div></div>
+          <label class="toggle"><input type="checkbox" id="set-show-widget" checked><span class="toggle-slider"></span></label>
+        </div>
+        <div class="settings-row">
+          <div><div>Theme</div></div>
+          <select class="settings-select" id="set-theme">
+            <option value="auto">Auto</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+          </select>
+        </div>
+        <div class="settings-row">
+          <div><div>Default model</div></div>
+          <select class="settings-select" id="set-model">
+            <option value="claude-3-sonnet">Claude 3.5 Sonnet</option>
+            <option value="claude-3-haiku">Claude 3 Haiku</option>
+            <option value="claude-3-opus">Claude 3 Opus</option>
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="gpt-3.5">GPT-3.5 Turbo</option>
+            <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+            <option value="gemini-flash">Gemini Flash</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">Budget Alerts</div>
+        <div class="settings-row">
+          <div><div>Daily limit ($)</div><div class="settings-sub">Alert when spend exceeds this</div></div>
+          <input type="number" class="budget-input" id="set-budget" value="5.00" min="0.01" max="1000" step="0.50">
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="settings-group-title">Account</div>
+        <div class="settings-row">
+          <div><div>TokenWise Plan</div><div class="settings-sub" id="settings-plan-sub">Free — 3 compressions/month</div></div>
+          <button class="btn-open-app" id="btn-upgrade" style="width:auto;padding:5px 10px;font-size:11px">Upgrade</button>
+        </div>
+      </div>
+
+      <button class="btn-primary" id="btn-save-settings" style="margin-top:8px">Save Settings</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script src="popup.js" type="module"></script>
+</body>
+</html>

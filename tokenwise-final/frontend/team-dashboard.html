@@ -1,0 +1,1584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TokenWise Teams</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ───────────────────────────────────────────────────── */
+:root {
+  --bg:#f5f5f2; --surface:#ffffff; --surface2:#f0f0ed; --surface3:#e8e8e4;
+  --border:rgba(0,0,0,0.08); --border2:rgba(0,0,0,0.13);
+  --accent:#00a572; --accent2:#6d55e8; --warn:#e05a1a; --danger:#dc2626;
+  --text:#1a1a1a; --muted:#888880; --muted2:#b0aca6;
+  --shadow:0 1px 4px rgba(0,0,0,0.06),0 4px 16px rgba(0,0,0,0.06);
+  --shadow-lg:0 8px 40px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06);
+  --header-bg:rgba(245,245,242,0.9);
+  --claude:#b8832a; --gpt:#2a9a6a; --gemini:#2a72c8;
+  --radius:16px; --radius-sm:10px;
+}
+body.dark {
+  --bg:#111110; --surface:#1a1a18; --surface2:#222220; --surface3:#2a2a27;
+  --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.13);
+  --accent:#00d68f; --accent2:#a78bfa; --warn:#fb923c;
+  --text:#f0ede8; --muted:#8a8880; --muted2:#5a5850;
+  --shadow:0 1px 4px rgba(0,0,0,0.3),0 4px 16px rgba(0,0,0,0.3);
+  --shadow-lg:0 8px 40px rgba(0,0,0,0.5),0 2px 8px rgba(0,0,0,0.3);
+  --header-bg:rgba(17,17,16,0.9);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;transition:background .2s,color .2s;font-size:14px}
+button{cursor:pointer;font-family:'DM Sans',sans-serif}
+input,select,textarea{font-family:'DM Sans',sans-serif}
+a{color:var(--accent);text-decoration:none}
+
+/* ── LOADING ──────────────────────────────────────────────────── */
+#loading-screen{position:fixed;inset:0;z-index:999;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px;transition:opacity .3s}
+.loading-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;letter-spacing:-1px;color:var(--accent)}
+.loading-logo em{color:var(--text);font-style:normal}
+.spinner{width:28px;height:28px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── AUTH ─────────────────────────────────────────────────────── */
+#auth-screen{display:none;min-height:100vh;align-items:center;justify-content:center;padding:24px}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:44px 40px;width:100%;max-width:420px;box-shadow:var(--shadow-lg)}
+.auth-logo{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;letter-spacing:-0.5px;margin-bottom:28px;display:flex;align-items:center;gap:10px}
+.auth-logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:9px;display:flex;align-items:center;justify-content:center}
+.auth-logo em{color:var(--accent);font-style:normal}
+.auth-badge{background:rgba(109,85,232,0.1);border:1px solid rgba(109,85,232,0.2);color:var(--accent2);font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;font-family:'DM Mono',monospace;letter-spacing:.5px}
+.auth-title{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;margin-bottom:5px}
+.auth-sub{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.6}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-bottom:5px;letter-spacing:.6px;text-transform:uppercase}
+.field input{width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--accent)}
+.btn-primary{width:100%;padding:12px;border-radius:11px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'Syne',sans-serif;font-weight:800;font-size:14px;transition:opacity .15s}
+.btn-primary:hover{opacity:.9}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed}
+.auth-switch{text-align:center;font-size:12px;color:var(--muted);margin-top:14px}
+.auth-switch a{color:var(--accent);font-weight:600;cursor:pointer}
+.auth-error{background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);border-radius:8px;padding:10px 13px;font-size:12px;color:var(--danger);margin-bottom:14px;display:none}
+
+/* ── HEADER ───────────────────────────────────────────────────── */
+header{position:sticky;top:0;z-index:100;background:var(--header-bg);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:58px;box-shadow:var(--shadow)}
+.logo{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px}
+.logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:7px;display:flex;align-items:center;justify-content:center}
+.logo em{color:var(--accent);font-style:normal}
+.logo-badge{background:rgba(109,85,232,0.12);color:var(--accent2);font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;font-family:'DM Mono',monospace;border:1px solid rgba(109,85,232,0.2)}
+.header-right{display:flex;align-items:center;gap:10px}
+.workspace-selector{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--text);outline:none;cursor:pointer;display:flex;align-items:center;gap:6px}
+#ws-select{background:transparent;border:none;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;outline:none;cursor:pointer;padding:0 20px 0 0}
+.user-chip{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 4px}
+.user-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff}
+.user-chip-name{font-size:12px;font-weight:600}
+.theme-toggle{width:32px;height:32px;border-radius:50%;background:var(--surface2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
+.theme-toggle:hover{border-color:var(--muted)}
+.btn-icon{background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--muted);transition:all .15s}
+.btn-icon:hover{color:var(--text);border-color:var(--muted)}
+
+/* ── LAYOUT ───────────────────────────────────────────────────── */
+#app{display:none}
+.main-layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 58px)}
+
+/* ── SIDEBAR ──────────────────────────────────────────────────── */
+.sidebar{border-right:1px solid var(--border);padding:20px 0;background:var(--surface);position:sticky;top:58px;height:calc(100vh - 58px);overflow-y:auto}
+.nav-section{margin-bottom:24px}
+.nav-label{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:1px;padding:0 18px;margin-bottom:6px;font-family:'DM Mono',monospace}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 18px;cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);transition:all .15s;border-radius:0;position:relative}
+.nav-item:hover{color:var(--text);background:var(--surface2)}
+.nav-item.active{color:var(--accent);background:rgba(0,165,114,0.07);font-weight:700}
+.nav-item.active::before{content:'';position:absolute;left:0;top:25%;bottom:25%;width:3px;background:var(--accent);border-radius:0 3px 3px 0}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:9px;font-weight:800;padding:2px 6px;border-radius:10px;font-family:'DM Mono',monospace}
+
+.sidebar-bottom{padding:16px 18px;border-top:1px solid var(--border);margin-top:auto}
+.plan-card{background:linear-gradient(135deg,rgba(0,165,114,0.08),rgba(109,85,232,0.08));border:1px solid rgba(0,165,114,0.15);border-radius:12px;padding:14px}
+.plan-name{font-family:'Syne',sans-serif;font-weight:800;font-size:14px;margin-bottom:3px}
+.plan-sub{font-size:11px;color:var(--muted);margin-bottom:10px}
+.btn-upgrade{width:100%;padding:8px;border-radius:8px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:12px}
+
+/* ── PAGE CONTENT ─────────────────────────────────────────────── */
+.page-content{padding:28px 32px;overflow-y:auto}
+.page-header{margin-bottom:28px}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:26px;letter-spacing:-0.8px;margin-bottom:5px}
+.page-sub{font-size:14px;color:var(--muted)}
+
+/* ── PANELS ───────────────────────────────────────────────────── */
+.panel{display:none}
+.panel.active{display:block}
+
+/* ── KPI GRID ─────────────────────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;position:relative;overflow:hidden;transition:box-shadow .2s}
+.kpi:hover{box-shadow:var(--shadow)}
+.kpi-accent{position:absolute;top:0;left:0;right:0;height:3px}
+.kpi-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-family:'DM Mono',monospace;margin-bottom:8px}
+.kpi-val{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-1px;line-height:1}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:5px}
+.kpi-trend{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;padding:2px 7px;border-radius:10px;margin-top:6px}
+.kpi-trend.up{background:rgba(0,165,114,.1);color:var(--accent)}
+.kpi-trend.down{background:rgba(224,90,26,.1);color:var(--warn)}
+
+/* ── SECTION CARDS ────────────────────────────────────────────── */
+.section-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;overflow:hidden}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--border)}
+.section-title{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px}
+.section-body{padding:20px}
+.section-actions{display:flex;gap:8px;align-items:center}
+
+/* ── TWO COL ──────────────────────────────────────────────────── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px}
+
+/* ── MEMBER TABLE ─────────────────────────────────────────────── */
+.member-table{width:100%;border-collapse:collapse}
+.member-table th{font-size:10px;font-weight:700;color:var(--muted2);text-transform:uppercase;letter-spacing:.8px;padding:0 0 10px;text-align:left;font-family:'DM Mono',monospace;border-bottom:1px solid var(--border)}
+.member-table td{padding:12px 0;border-bottom:1px solid var(--border);vertical-align:middle}
+.member-table tr:last-child td{border:none}
+.member-table tr:hover td{background:var(--surface2);margin:0 -20px}
+.member-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:#fff;flex-shrink:0}
+.member-info{display:flex;align-items:center;gap:10px}
+.member-name{font-weight:600;font-size:13px}
+.member-email{font-size:11px;color:var(--muted)}
+.role-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;font-family:'DM Mono',monospace;text-transform:uppercase}
+.role-badge.admin{background:rgba(109,85,232,.1);color:var(--accent2);border:1px solid rgba(109,85,232,.2)}
+.role-badge.member{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.role-badge.owner{background:rgba(0,165,114,.1);color:var(--accent);border:1px solid rgba(0,165,114,.2)}
+.spend-bar-wrap{display:flex;align-items:center;gap:8px}
+.spend-bar{height:5px;background:var(--surface3);border-radius:5px;flex:1;overflow:hidden}
+.spend-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:5px;transition:width .4s ease}
+.spend-amt{font-family:'DM Mono',monospace;font-size:12px;font-weight:500;white-space:nowrap}
+
+/* ── CHART ────────────────────────────────────────────────────── */
+.chart-wrap{position:relative;height:180px}
+canvas.chart{width:100%;height:100%}
+
+/* ── MODEL BREAKDOWN ──────────────────────────────────────────── */
+.model-rows{display:flex;flex-direction:column;gap:8px}
+.model-row{display:flex;align-items:center;gap:10px}
+.model-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.model-name-label{font-size:12px;font-weight:600;flex:1}
+.model-bar{height:4px;background:var(--surface3);border-radius:4px;width:80px;overflow:hidden}
+.model-bar-fill{height:100%;border-radius:4px;transition:width .4s}
+.model-pct{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:32px;text-align:right}
+.model-cost-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);width:56px;text-align:right}
+
+/* ── PROJECT TABLE ────────────────────────────────────────────── */
+.project-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.project-item:last-child{border:none}
+.project-color{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.project-name{font-weight:700;font-size:13px;flex:1}
+.project-meta{font-size:11px;color:var(--muted)}
+.project-cost{font-family:'DM Mono',monospace;font-size:13px;font-weight:700}
+
+/* ── ACTIVITY FEED ────────────────────────────────────────────── */
+.activity-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border:none}
+.activity-av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:#fff;flex-shrink:0;margin-top:1px}
+.activity-text{font-size:12px;line-height:1.6}
+.activity-text strong{font-weight:700}
+.activity-time{font-size:10px;color:var(--muted);margin-top:2px;font-family:'DM Mono',monospace}
+
+/* ── INVITE FORM ──────────────────────────────────────────────── */
+.invite-form{display:flex;gap:10px;align-items:flex-end;margin-bottom:20px;padding:16px;background:var(--surface2);border-radius:12px;border:1px solid var(--border)}
+.invite-form .field{margin:0;flex:1}
+.invite-form .field input{margin-top:5px}
+.invite-role-select{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--text);outline:none;min-width:110px}
+.invite-role-select:focus{border-color:var(--accent)}
+.btn-invite{padding:11px 20px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:13px;white-space:nowrap}
+
+/* ── BUDGET PANEL ─────────────────────────────────────────────── */
+.budget-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
+.budget-item:last-child{border:none}
+.budget-who{flex:1}
+.budget-who-name{font-weight:700;font-size:13px}
+.budget-who-role{font-size:11px;color:var(--muted)}
+.budget-track{flex:2}
+.budget-bar-wrap{margin-top:5px;display:flex;align-items:center;gap:8px}
+.budget-bar{height:6px;background:var(--surface3);border-radius:6px;flex:1;overflow:hidden}
+.budget-bar-fill{height:100%;border-radius:6px;transition:width .4s}
+.budget-bar-fill.safe{background:linear-gradient(90deg,var(--accent),#4ade80)}
+.budget-bar-fill.warn{background:linear-gradient(90deg,#fbbf24,var(--warn))}
+.budget-bar-fill.danger{background:linear-gradient(90deg,var(--warn),var(--danger))}
+.budget-nums{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted)}
+.budget-limit-input{width:80px;padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;text-align:right;outline:none}
+.budget-limit-input:focus{border-color:var(--accent)}
+
+/* ── REPORT CARD ──────────────────────────────────────────────── */
+.report-preview{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:20px;font-size:12px;line-height:1.8;font-family:'DM Mono',monospace;color:var(--muted);margin-top:12px;max-height:220px;overflow:hidden;position:relative}
+.report-preview::after{content:'';position:absolute;bottom:0;left:0;right:0;height:60px;background:linear-gradient(transparent,var(--surface2))}
+.report-preview strong{color:var(--text)}
+
+/* ── EXPORT BUTTONS ───────────────────────────────────────────── */
+.export-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.btn-export{display:flex;align-items:center;gap:7px;padding:10px 18px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:13px;font-weight:600;transition:all .15s}
+.btn-export:hover{border-color:var(--accent);color:var(--accent)}
+.btn-export.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#fff;font-family:'Syne',sans-serif;font-weight:700}
+.btn-export.primary:hover{opacity:.9;color:#fff}
+
+/* ── SETTINGS ─────────────────────────────────────────────────── */
+.settings-group{margin-bottom:24px}
+.settings-group-title{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border:none}
+.settings-label{font-size:13px;font-weight:500}
+.settings-sub{font-size:11px;color:var(--muted);margin-top:2px}
+.toggle{position:relative;width:34px;height:19px;cursor:pointer;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--surface3);border-radius:10px;transition:.2s;border:1px solid var(--border)}
+.toggle-slider::before{content:'';position:absolute;width:14px;height:14px;left:2px;top:2px;background:var(--muted);border-radius:50%;transition:.2s}
+.toggle input:checked + .toggle-slider{background:var(--accent);border-color:var(--accent)}
+.toggle input:checked + .toggle-slider::before{transform:translateX(15px);background:#fff}
+.danger-zone{background:rgba(220,38,38,.04);border:1px solid rgba(220,38,38,.15);border-radius:12px;padding:20px}
+.danger-zone h3{color:var(--danger);font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:8px}
+.btn-danger{padding:9px 18px;border-radius:9px;border:1.5px solid rgba(220,38,38,.3);background:transparent;color:var(--danger);font-size:13px;font-weight:600;transition:all .15s}
+.btn-danger:hover{background:rgba(220,38,38,.08)}
+
+/* ── MODAL ────────────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px;width:100%;max-width:480px;box-shadow:var(--shadow-lg);position:relative}
+.modal-title{font-family:'Syne',sans-serif;font-weight:800;font-size:18px;margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+.modal-close{position:absolute;top:16px;right:16px;background:var(--surface2);border:1px solid var(--border);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--muted)}
+.modal-close:hover{color:var(--text)}
+
+/* ── EMPTY STATE ──────────────────────────────────────────────── */
+.empty-state{text-align:center;padding:48px 24px;color:var(--muted)}
+.empty-state .emoji{font-size:40px;margin-bottom:12px}
+.empty-state h3{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:var(--text);margin-bottom:6px}
+.empty-state p{font-size:13px;line-height:1.6}
+
+/* ── TOAST ────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:var(--bg);padding:11px 20px;border-radius:12px;font-size:13px;font-weight:600;z-index:999;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+
+/* ── INLINE CHIP ──────────────────────────────────────────────── */
+.chip{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;font-family:'DM Mono',monospace}
+.chip.pro{background:rgba(109,85,232,.1);color:var(--accent2);border:1px solid rgba(109,85,232,.2)}
+.chip.free{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+
+/* ── TABS ─────────────────────────────────────────────────────── */
+.tab-row{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab-btn{padding:10px 16px;background:none;border:none;font-size:13px;font-weight:500;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700}
+
+/* ── RESPONSIVE ───────────────────────────────────────────────── */
+@media(max-width:900px){
+  .main-layout{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .two-col,.three-col{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .kpi-grid{grid-template-columns:1fr}
+  .page-content{padding:20px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="loading-logo">Token<em>Wise</em> <span style="font-size:14px;color:var(--muted)">Teams</span></div>
+  <div class="spinner"></div>
+</div>
+
+<!-- AUTH -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 12L8 5L12 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      Token<em>Wise</em>
+      <span class="auth-badge">TEAMS</span>
+    </div>
+    <div id="auth-login-view">
+      <div class="auth-title">Sign in to your workspace</div>
+      <div class="auth-sub">Manage your team's AI spending and usage in one place.</div>
+      <div id="auth-error" class="auth-error"></div>
+      <div class="field"><label>Email</label><input type="email" id="login-email" placeholder="you@company.com" autocomplete="email"></div>
+      <div class="field"><label>Password</label><input type="password" id="login-password" placeholder="Your password" autocomplete="current-password"></div>
+      <button class="btn-primary" id="btn-login">Sign in →</button>
+      <div class="auth-switch">No account? <a id="show-signup">Create one free →</a></div>
+      <div class="auth-switch" style="margin-top:8px"><a id="show-reset" style="font-size:11px;color:var(--muted)">Forgot password?</a></div>
+    </div>
+    <div id="auth-signup-view" style="display:none">
+      <div class="auth-title">Create your workspace</div>
+      <div class="auth-sub">Free to start. Invite your team and track AI spend together.</div>
+      <div id="signup-error" class="auth-error"></div>
+      <div class="field"><label>Your name</label><input type="text" id="signup-name" placeholder="Jane Smith"></div>
+      <div class="field"><label>Work email</label><input type="email" id="signup-email" placeholder="jane@company.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="signup-password" placeholder="Min 8 characters"></div>
+      <div class="field"><label>Workspace name</label><input type="text" id="signup-workspace" placeholder="Acme Agency"></div>
+      <button class="btn-primary" id="btn-signup">Create workspace →</button>
+      <div class="auth-switch">Have an account? <a id="show-login">Sign in →</a></div>
+    </div>
+    <div id="auth-reset-view" style="display:none">
+      <div class="auth-title">Reset your password</div>
+      <div class="auth-sub">Enter your email and we'll send a reset link.</div>
+      <div class="field"><label>Email</label><input type="email" id="reset-email" placeholder="you@company.com"></div>
+      <button class="btn-primary" id="btn-reset">Send reset link</button>
+      <div class="auth-switch"><a id="back-login">← Back to sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- HEADER -->
+  <header>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="logo">
+        <div class="logo-icon"><svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3.5 11.5L7.5 4.5L11.5 11.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        Token<em>Wise</em>
+        <span class="logo-badge">TEAMS</span>
+      </div>
+      <div class="workspace-selector">
+        <span style="font-size:12px">🏢</span>
+        <select id="ws-select"></select>
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="btn-icon" onclick="openModal('new-project-modal')">+ Project</button>
+      <button class="btn-icon" onclick="openModal('invite-modal')">+ Invite</button>
+      <div class="user-chip">
+        <div class="user-av" id="header-av">JD</div>
+        <span class="user-chip-name" id="header-name">Jane</span>
+      </div>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle theme">🌙</button>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="nav-section">
+        <div class="nav-label">Overview</div>
+        <div class="nav-item active" onclick="showPanel('overview',this)">
+          <span class="nav-icon">📊</span> Dashboard
+        </div>
+        <div class="nav-item" onclick="showPanel('activity',this)">
+          <span class="nav-icon">⚡</span> Activity
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Team</div>
+        <div class="nav-item" onclick="showPanel('members',this)">
+          <span class="nav-icon">👥</span> Members
+          <span class="nav-badge" id="member-count-badge">—</span>
+        </div>
+        <div class="nav-item" onclick="showPanel('projects',this)">
+          <span class="nav-icon">📁</span> Projects
+        </div>
+        <div class="nav-item" onclick="showPanel('budgets',this)">
+          <span class="nav-icon">💰</span> Budgets
+        </div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-label">Reports</div>
+        <div class="nav-item" onclick="showPanel('reports',this)">
+          <span class="nav-icon">📋</span> Reports
+        </div>
+        <div class="nav-item" onclick="showPanel('settings',this)">
+          <span class="nav-icon">⚙️</span> Settings
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sidebar-bottom">
+        <div class="plan-card">
+          <div class="plan-name" id="sidebar-plan">Free Plan</div>
+          <div class="plan-sub" id="sidebar-plan-sub">Up to 3 members</div>
+          <button class="btn-upgrade" onclick="openModal('upgrade-modal')">Upgrade to Pro →</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="page-content">
+
+      <!-- ── OVERVIEW ─────────────────────────────────────────── -->
+      <div class="panel active" id="panel-overview">
+        <div class="page-header">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div class="page-title" id="ws-title">My Workspace</div>
+              <div class="page-sub" id="overview-period">Loading…</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <select id="period-select" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:7px 12px;font-size:13px;color:var(--text);outline:none" onchange="loadDashboard()">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>This month</option>
+                <option value="90">Last 90 days</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- KPIs -->
+        <div class="kpi-grid">
+          <div class="kpi">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,var(--accent),transparent)"></div>
+            <div class="kpi-label">Total spend</div>
+            <div class="kpi-val" id="kpi-spend">$0.00</div>
+            <div class="kpi-sub" id="kpi-spend-sub">this period</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,var(--accent2),transparent)"></div>
+            <div class="kpi-label">Total tokens</div>
+            <div class="kpi-val" id="kpi-tokens">0</div>
+            <div class="kpi-sub" id="kpi-tokens-sub">across all members</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,var(--warn),transparent)"></div>
+            <div class="kpi-label">Prompts sent</div>
+            <div class="kpi-val" id="kpi-prompts">0</div>
+            <div class="kpi-sub">sessions logged</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-accent" style="background:linear-gradient(90deg,var(--claude),transparent)"></div>
+            <div class="kpi-label">Active members</div>
+            <div class="kpi-val" id="kpi-members">0</div>
+            <div class="kpi-sub">used AI this period</div>
+          </div>
+        </div>
+
+        <!-- Chart + Model breakdown -->
+        <div class="two-col">
+          <div class="section-card">
+            <div class="section-header">
+              <div class="section-title">📈 Daily spend</div>
+            </div>
+            <div class="section-body">
+              <div class="chart-wrap"><canvas id="spend-chart"></canvas></div>
+            </div>
+          </div>
+          <div class="section-card">
+            <div class="section-header">
+              <div class="section-title">🤖 Model breakdown</div>
+            </div>
+            <div class="section-body">
+              <div class="model-rows" id="model-breakdown">
+                <div style="color:var(--muted);font-size:13px">Loading…</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Member spend table -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">👥 Member spend</div>
+            <div class="section-actions">
+              <button class="btn-export" onclick="exportCSV()">⬇ Export CSV</button>
+            </div>
+          </div>
+          <div class="section-body" style="padding:0 20px">
+            <table class="member-table" id="member-spend-table">
+              <thead>
+                <tr>
+                  <th style="width:35%">Member</th>
+                  <th>Role</th>
+                  <th>Tokens</th>
+                  <th>Spend</th>
+                  <th>% of total</th>
+                </tr>
+              </thead>
+              <tbody id="member-spend-body">
+                <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;font-size:13px">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Recent activity -->
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">⚡ Recent activity</div>
+          </div>
+          <div class="section-body" id="recent-activity">
+            <div style="color:var(--muted);font-size:13px">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MEMBERS ──────────────────────────────────────────── -->
+      <div class="panel" id="panel-members">
+        <div class="page-header">
+          <div class="page-title">Team Members</div>
+          <div class="page-sub">Manage who has access to your workspace</div>
+        </div>
+
+        <div class="invite-form">
+          <div class="field" style="flex:1">
+            <label>Email address</label>
+            <input type="email" id="invite-email-input" placeholder="colleague@company.com">
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:5px">Role</div>
+            <select class="invite-role-select" id="invite-role-select">
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button class="btn-invite" onclick="inviteMember()">Send invite →</button>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">Members <span id="members-count-label" style="font-size:12px;color:var(--muted);font-weight:400"></span></div>
+          </div>
+          <div style="padding:0 20px">
+            <table class="member-table" id="full-member-table">
+              <thead>
+                <tr>
+                  <th style="width:40%">Member</th>
+                  <th>Role</th>
+                  <th>Tokens (month)</th>
+                  <th>Spend</th>
+                  <th>Joined</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="full-member-body">
+                <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;font-size:13px">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── PROJECTS ─────────────────────────────────────────── -->
+      <div class="panel" id="panel-projects">
+        <div class="page-header">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div class="page-title">Projects</div>
+              <div class="page-sub">Track AI spend per client or project</div>
+            </div>
+            <button class="btn-export primary" onclick="openModal('new-project-modal')">+ New project</button>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="section-body" id="projects-list">
+            <div class="empty-state">
+              <div class="emoji">📁</div>
+              <h3>No projects yet</h3>
+              <p>Create projects to track AI spending per client, campaign, or initiative.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── BUDGETS ──────────────────────────────────────────── -->
+      <div class="panel" id="panel-budgets">
+        <div class="page-header">
+          <div class="page-title">Budget Controls</div>
+          <div class="page-sub">Set monthly spending limits per member and get alerted when they're close</div>
+        </div>
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">💰 Monthly limits</div>
+            <button class="btn-export primary" onclick="saveBudgets()">Save limits</button>
+          </div>
+          <div class="section-body" id="budgets-list">
+            <div style="color:var(--muted);font-size:13px">Loading…</div>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">🔔 Alert settings</div>
+          </div>
+          <div class="section-body">
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Alert at 80% of limit</div>
+                <div class="settings-sub">Email the workspace owner when any member hits 80%</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="alert-80" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Alert at 100% of limit</div>
+                <div class="settings-sub">Email owner and member when limit is reached</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="alert-100" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Block usage at limit</div>
+                <div class="settings-sub">Prevent further API calls when member exceeds their budget (Pro only)</div>
+              </div>
+              <label class="toggle"><input type="checkbox" id="block-usage" disabled><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ACTIVITY ─────────────────────────────────────────── -->
+      <div class="panel" id="panel-activity">
+        <div class="page-header">
+          <div class="page-title">Activity Feed</div>
+          <div class="page-sub">All sessions logged by your team, most recent first</div>
+        </div>
+        <div class="section-card">
+          <div class="section-header">
+            <div class="section-title">All sessions</div>
+            <div class="section-actions">
+              <select id="activity-member-filter" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text);outline:none" onchange="loadActivity()">
+                <option value="">All members</option>
+              </select>
+              <select id="activity-model-filter" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text);outline:none" onchange="loadActivity()">
+                <option value="">All models</option>
+                <option value="claude">Claude</option>
+                <option value="gpt">GPT</option>
+                <option value="gemini">Gemini</option>
+              </select>
+            </div>
+          </div>
+          <div class="section-body" id="activity-list">
+            <div style="color:var(--muted);font-size:13px">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── REPORTS ──────────────────────────────────────────── -->
+      <div class="panel" id="panel-reports">
+        <div class="page-header">
+          <div class="page-title">Reports</div>
+          <div class="page-sub">Generate client-ready summaries of your team's AI spend</div>
+        </div>
+        <div class="two-col">
+          <div class="section-card">
+            <div class="section-header"><div class="section-title">📄 Monthly report</div></div>
+            <div class="section-body">
+              <div style="font-size:13px;color:var(--muted);margin-bottom:12px">A complete summary of AI usage, costs by member, model breakdown, and trends.</div>
+              <div id="report-preview" class="report-preview">Generating preview…</div>
+              <div class="export-row">
+                <button class="btn-export primary" onclick="exportCSV()">⬇ Download CSV</button>
+                <button class="btn-export" onclick="copyReport()">📋 Copy report</button>
+              </div>
+            </div>
+          </div>
+          <div class="section-card">
+            <div class="section-header"><div class="section-title">📊 Client invoice export</div></div>
+            <div class="section-body">
+              <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Export a clean cost breakdown to include in client billing. Shows AI costs per project.</div>
+              <div id="projects-report-list" style="margin-bottom:16px"></div>
+              <div class="export-row">
+                <button class="btn-export primary" onclick="exportInvoiceCSV()">⬇ Invoice CSV</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ─────────────────────────────────────────── -->
+      <div class="panel" id="panel-settings">
+        <div class="page-header">
+          <div class="page-title">Workspace Settings</div>
+          <div class="page-sub">Manage your workspace and plan</div>
+        </div>
+        <div class="section-card">
+          <div class="section-body">
+            <div class="settings-group">
+              <div class="settings-group-title">Workspace</div>
+              <div class="settings-row">
+                <div><div class="settings-label">Workspace name</div></div>
+                <input type="text" id="ws-name-input" style="width:200px;padding:7px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:13px;outline:none" placeholder="Acme Agency">
+              </div>
+              <div class="settings-row">
+                <div><div class="settings-label">Your role</div></div>
+                <span class="role-badge owner" id="settings-role">Owner</span>
+              </div>
+            </div>
+            <div class="settings-group">
+              <div class="settings-group-title">Notifications</div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Weekly summary email</div>
+                  <div class="settings-sub">Receive a Monday morning digest of team AI spend</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="weekly-email" checked><span class="toggle-slider"></span></label>
+              </div>
+              <div class="settings-row">
+                <div>
+                  <div class="settings-label">Budget alert emails</div>
+                  <div class="settings-sub">Notify when a member approaches their limit</div>
+                </div>
+                <label class="toggle"><input type="checkbox" id="budget-emails" checked><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+            <button class="btn-export primary" onclick="saveSettings()">Save settings</button>
+          </div>
+        </div>
+        <div class="section-card" style="margin-top:16px">
+          <div class="section-body">
+            <div class="danger-zone">
+              <h3>⚠ Danger zone</h3>
+              <p style="font-size:12px;color:var(--muted);margin-bottom:14px">These actions cannot be undone.</p>
+              <button class="btn-danger" onclick="confirmDeleteWorkspace()">Delete workspace</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="invite-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('invite-modal')">×</button>
+    <div class="modal-title">Invite team member</div>
+    <div class="modal-sub">They'll receive an email to join your workspace.</div>
+    <div class="field"><label>Email</label><input type="email" id="modal-invite-email" placeholder="colleague@company.com"></div>
+    <div class="field"><label>Role</label>
+      <select id="modal-invite-role" style="width:100%;padding:11px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;outline:none">
+        <option value="member">Member — can view their own stats</option>
+        <option value="admin">Admin — can view all members and export</option>
+      </select>
+    </div>
+    <button class="btn-primary" onclick="inviteFromModal()">Send invitation →</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="new-project-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('new-project-modal')">×</button>
+    <div class="modal-title">New project</div>
+    <div class="modal-sub">Track AI spend for a client, campaign, or initiative.</div>
+    <div class="field"><label>Project name</label><input type="text" id="project-name-input" placeholder="e.g. Acme Corp Q3 Campaign"></div>
+    <div class="field"><label>Monthly budget (optional)</label><input type="number" id="project-budget-input" placeholder="e.g. 500" min="0"></div>
+    <div class="field"><label>Color</label>
+      <div style="display:flex;gap:8px;margin-top:6px" id="color-picker">
+        <div class="color-opt" data-color="#00a572" onclick="selectColor(this)" style="width:24px;height:24px;border-radius:50%;background:#00a572;cursor:pointer;border:2px solid transparent"></div>
+        <div class="color-opt" onclick="selectColor(this)" data-color="#6d55e8" style="width:24px;height:24px;border-radius:50%;background:#6d55e8;cursor:pointer;border:2px solid transparent"></div>
+        <div class="color-opt" onclick="selectColor(this)" data-color="#e05a1a" style="width:24px;height:24px;border-radius:50%;background:#e05a1a;cursor:pointer;border:2px solid transparent"></div>
+        <div class="color-opt" onclick="selectColor(this)" data-color="#2a72c8" style="width:24px;height:24px;border-radius:50%;background:#2a72c8;cursor:pointer;border:2px solid transparent"></div>
+        <div class="color-opt" onclick="selectColor(this)" data-color="#b8832a" style="width:24px;height:24px;border-radius:50%;background:#b8832a;cursor:pointer;border:2px solid transparent"></div>
+      </div>
+    </div>
+    <button class="btn-primary" style="margin-top:8px" onclick="createProject()">Create project →</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="upgrade-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('upgrade-modal')">×</button>
+    <div class="modal-title">Upgrade to Pro</div>
+    <div class="modal-sub">Unlock unlimited members, budget enforcement, and priority support.</div>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="color:var(--accent)">✓</span> Unlimited team members (Free: 3)</div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="color:var(--accent)">✓</span> Per-member budget enforcement</div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="color:var(--accent)">✓</span> Unlimited projects</div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="color:var(--accent)">✓</span> Client invoice exports</div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="color:var(--accent)">✓</span> Weekly AI summary emails</div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="color:var(--accent)">✓</span> Priority support</div>
+    </div>
+    <button class="btn-primary" onclick="goToCheckout()">Upgrade — $299/month →</button>
+    <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:10px">Billed monthly · Cancel anytime · 14-day free trial</div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://eojugvrsovcheebdtwfc.supabase.co';
+const SUPABASE_ANON_KEY = 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE';
+const LEMON_TEAM_PRO_LINK = 'https://YOUR_LEMONSQUEEZY_TEAM_PRO_LINK';
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ── STATE ──────────────────────────────────────────────────────────────────
+let currentUser = null;
+let currentProfile = null;
+let currentWorkspace = null;
+let allWorkspaces = [];
+let allMembers = [];
+let allSessions = [];
+let allProjects = [];
+let selectedProjectColor = '#00a572';
+let budgetEdits = {};
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+(async function init() {
+  applyTheme();
+  const { data: { session } } = await sb.auth.getSession();
+  if (session?.user) {
+    currentUser = session.user;
+    await boot();
+  } else {
+    showAuth();
+  }
+
+  sb.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session?.user) {
+      currentUser = session.user;
+      await boot();
+    } else if (event === 'SIGNED_OUT') {
+      showAuth();
+    }
+  });
+})();
+
+async function boot() {
+  await loadProfile();
+  await loadWorkspaces();
+  renderHeader();
+  showApp();
+  await loadDashboard();
+}
+
+// ── AUTH ───────────────────────────────────────────────────────────────────
+function showAuth() {
+  hide('loading-screen');
+  hide('app');
+  show('auth-screen', 'flex');
+  setupAuthListeners();
+}
+
+function showApp() {
+  hide('loading-screen');
+  hide('auth-screen');
+  show('app');
+}
+
+function setupAuthListeners() {
+  // Already bound via onclick, but attach enter key on inputs
+  document.getElementById('login-password')?.addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
+  document.getElementById('signup-password')?.addEventListener('keydown', e => { if(e.key==='Enter') handleSignup(); });
+  document.getElementById('reset-email')?.addEventListener('keydown', e => { if(e.key==='Enter') handleReset(); });
+}
+
+async function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('auth-error');
+  if (!email || !password) { showErr(errEl,'Fill in all fields'); return; }
+  setBtnLoading('btn-login', 'Signing in…');
+  try {
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) { showErr(errEl, error.message); }
+  } catch(e) { showErr(errEl,'Network error'); }
+  finally { resetBtn('btn-login','Sign in →'); }
+}
+
+async function handleSignup() {
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const workspace = document.getElementById('signup-workspace').value.trim() || name + "'s Workspace";
+  const errEl = document.getElementById('signup-error');
+  if (!name||!email||!password) { showErr(errEl,'Fill in all fields'); return; }
+  if (password.length < 8) { showErr(errEl,'Password must be 8+ characters'); return; }
+  setBtnLoading('btn-signup','Creating…');
+  try {
+    const { data, error } = await sb.auth.signUp({ email, password, options: { data: { full_name: name, workspace_name: workspace }}});
+    if (error) { showErr(errEl, error.message); }
+    else { toast('✓ Check your email to confirm your account'); switchAuthView('login'); }
+  } catch(e) { showErr(errEl,'Network error'); }
+  finally { resetBtn('btn-signup','Create workspace →'); }
+}
+
+async function handleReset() {
+  const email = document.getElementById('reset-email').value.trim();
+  if (!email) return;
+  setBtnLoading('btn-reset','Sending…');
+  await sb.auth.resetPasswordForEmail(email);
+  resetBtn('btn-reset','Send reset link');
+  toast('✓ Reset link sent — check your email');
+  switchAuthView('login');
+}
+
+function switchAuthView(view) {
+  ['login','signup','reset'].forEach(v => hide(`auth-${v}-view`));
+  show(`auth-${view}-view`);
+}
+
+document.getElementById('btn-login')?.addEventListener('click', handleLogin);
+document.getElementById('btn-signup')?.addEventListener('click', handleSignup);
+document.getElementById('btn-reset')?.addEventListener('click', handleReset);
+document.getElementById('show-signup')?.addEventListener('click', () => switchAuthView('signup'));
+document.getElementById('show-login')?.addEventListener('click', () => switchAuthView('login'));
+document.getElementById('show-reset')?.addEventListener('click', () => switchAuthView('reset'));
+document.getElementById('back-login')?.addEventListener('click', () => switchAuthView('login'));
+
+// ── PROFILE + WORKSPACES ───────────────────────────────────────────────────
+async function loadProfile() {
+  const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+  currentProfile = data;
+}
+
+async function loadWorkspaces() {
+  // Load workspaces this user belongs to or owns
+  const { data: memberships } = await sb.from('team_members')
+    .select('*, teams(*)')
+    .eq('user_id', currentUser.id);
+
+  if (memberships?.length) {
+    allWorkspaces = memberships.map(m => ({ ...m.teams, role: m.role }));
+    currentWorkspace = allWorkspaces[0];
+  } else {
+    // Create a default workspace for new users
+    const wsName = currentUser.user_metadata?.workspace_name || 'My Workspace';
+    const { data: ws } = await sb.from('teams').insert({ name: wsName, owner_id: currentUser.id }).select().single();
+    if (ws) {
+      await sb.from('team_members').insert({ team_id: ws.id, user_id: currentUser.id, role: 'owner' });
+      allWorkspaces = [{ ...ws, role: 'owner' }];
+      currentWorkspace = allWorkspaces[0];
+    }
+  }
+
+  // Populate workspace selector
+  const sel = document.getElementById('ws-select');
+  sel.innerHTML = allWorkspaces.map(ws => `<option value="${ws.id}">${ws.name}</option>`).join('');
+  sel.value = currentWorkspace?.id || '';
+  sel.addEventListener('change', async (e) => {
+    currentWorkspace = allWorkspaces.find(w => w.id === e.target.value);
+    await loadDashboard();
+  });
+}
+
+// ── DASHBOARD DATA ─────────────────────────────────────────────────────────
+async function loadDashboard() {
+  if (!currentWorkspace) return;
+  const days = parseInt(document.getElementById('period-select')?.value || 30);
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+
+  document.getElementById('ws-title').textContent = currentWorkspace.name;
+  document.getElementById('overview-period').textContent = `Last ${days} days`;
+
+  // Load all sessions for this team
+  const { data: members } = await sb.from('team_members')
+    .select('user_id, role, profiles(full_name, email)')
+    .eq('team_id', currentWorkspace.id);
+
+  allMembers = members || [];
+  const memberIds = allMembers.map(m => m.user_id);
+
+  document.getElementById('member-count-badge').textContent = allMembers.length;
+  document.getElementById('members-count-label').textContent = `— ${allMembers.length} total`;
+
+  const { data: sessions } = await sb.from('sessions')
+    .select('*')
+    .in('user_id', memberIds)
+    .gte('created_at', since)
+    .order('created_at', { ascending: false });
+
+  allSessions = sessions || [];
+
+  renderKPIs();
+  renderMemberSpendTable();
+  renderModelBreakdown();
+  renderSpendChart(days);
+  renderRecentActivity();
+  renderFullMemberTable();
+  renderBudgets();
+  renderActivity();
+  renderReportPreview();
+  renderProjectsReport();
+}
+
+function renderKPIs() {
+  const totalSpend = allSessions.reduce((s,x) => s + (parseFloat(x.cost_gpt4o)||0), 0);
+  const totalTokens = allSessions.reduce((s,x) => s + (x.tokens||0), 0);
+  const activeMembers = new Set(allSessions.map(s => s.user_id)).size;
+
+  document.getElementById('kpi-spend').textContent = '$' + totalSpend.toFixed(4);
+  document.getElementById('kpi-tokens').textContent = fmtNum(totalTokens);
+  document.getElementById('kpi-prompts').textContent = allSessions.length.toLocaleString();
+  document.getElementById('kpi-members').textContent = activeMembers;
+}
+
+function renderMemberSpendTable() {
+  const byMember = {};
+  allSessions.forEach(s => {
+    if (!byMember[s.user_id]) byMember[s.user_id] = { tokens:0, spend:0, count:0 };
+    byMember[s.user_id].tokens += s.tokens||0;
+    byMember[s.user_id].spend += parseFloat(s.cost_gpt4o)||0;
+    byMember[s.user_id].count++;
+  });
+
+  const totalSpend = Object.values(byMember).reduce((s,m) => s+m.spend, 0);
+
+  const rows = allMembers.map(m => {
+    const stats = byMember[m.user_id] || { tokens:0, spend:0 };
+    const pct = totalSpend > 0 ? (stats.spend / totalSpend * 100) : 0;
+    const name = m.profiles?.full_name || m.profiles?.email || 'Unknown';
+    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const color = memberColor(m.user_id);
+    return `<tr>
+      <td><div class="member-info">
+        <div class="member-av" style="background:${color}">${initials}</div>
+        <div><div class="member-name">${name}</div><div class="member-email">${m.profiles?.email||''}</div></div>
+      </div></td>
+      <td><span class="role-badge ${m.role}">${m.role}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px">${fmtNum(stats.tokens)}</span></td>
+      <td>
+        <div class="spend-bar-wrap">
+          <div class="spend-bar"><div class="spend-bar-fill" style="width:${pct}%"></div></div>
+          <span class="spend-amt">$${stats.spend.toFixed(4)}</span>
+        </div>
+      </td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px">${pct.toFixed(1)}%</span></td>
+    </tr>`;
+  });
+
+  document.getElementById('member-spend-body').innerHTML = rows.length
+    ? rows.join('')
+    : '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;font-size:13px">No usage data yet for this period.</td></tr>';
+}
+
+function renderModelBreakdown() {
+  const modelTotals = {};
+  allSessions.forEach(s => {
+    const m = (s.model_used||'unknown').toLowerCase();
+    const family = m.includes('claude') ? 'Claude' : m.includes('gpt') ? 'GPT' : m.includes('gemini') ? 'Gemini' : 'Other';
+    if (!modelTotals[family]) modelTotals[family] = 0;
+    modelTotals[family] += s.tokens||0;
+  });
+
+  const total = Object.values(modelTotals).reduce((a,b)=>a+b,0)||1;
+  const colors = { Claude:'var(--claude)', GPT:'var(--gpt)', Gemini:'var(--gemini)', Other:'var(--muted)' };
+  const entries = Object.entries(modelTotals).sort((a,b)=>b[1]-a[1]);
+
+  document.getElementById('model-breakdown').innerHTML = entries.length ? entries.map(([name, tokens]) => {
+    const pct = (tokens/total*100).toFixed(1);
+    return `<div class="model-row">
+      <div class="model-dot" style="background:${colors[name]||'var(--muted)'}"></div>
+      <div class="model-name-label">${name}</div>
+      <div class="model-bar"><div class="model-bar-fill" style="width:${pct}%;background:${colors[name]||'var(--muted)'}"></div></div>
+      <div class="model-pct">${pct}%</div>
+      <div class="model-cost-label">${fmtNum(tokens)} tok</div>
+    </div>`;
+  }).join('') : '<div style="color:var(--muted);font-size:13px">No data yet.</div>';
+}
+
+function renderSpendChart(days) {
+  const canvas = document.getElementById('spend-chart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio || 600;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio || 180;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  const W = canvas.offsetWidth, H = canvas.offsetHeight;
+  ctx.clearRect(0,0,W,H);
+
+  // Bucket sessions by day
+  const byDay = {};
+  for (let i=days-1; i>=0; i--) {
+    const d = new Date(Date.now() - i*86400000);
+    byDay[d.toISOString().split('T')[0]] = 0;
+  }
+  allSessions.forEach(s => {
+    const day = s.created_at?.split('T')[0];
+    if (byDay[day] !== undefined) byDay[day] += parseFloat(s.cost_gpt4o)||0;
+  });
+
+  const vals = Object.values(byDay);
+  const labels = Object.keys(byDay);
+  const maxVal = Math.max(...vals, 0.001);
+  const pad = { t:10, r:10, b:28, l:48 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  const barW = Math.max(2, cW / vals.length - 3);
+
+  // Grid lines
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--border').trim()||'rgba(0,0,0,0.08)';
+  ctx.lineWidth = 1;
+  [0,.25,.5,.75,1].forEach(f => {
+    const y = pad.t + cH * (1-f);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l+cW, y); ctx.stroke();
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#888';
+    ctx.font = `10px 'DM Mono'`;
+    ctx.fillText('$'+(maxVal*f).toFixed(3), 0, y+3);
+  });
+
+  // Bars
+  vals.forEach((v, i) => {
+    const x = pad.l + i * (cW/vals.length);
+    const bH = (v/maxVal) * cH;
+    const y = pad.t + cH - bH;
+    const grad = ctx.createLinearGradient(x, y, x, y+bH);
+    grad.addColorStop(0,'rgba(0,165,114,0.9)');
+    grad.addColorStop(1,'rgba(109,85,232,0.7)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.roundRect(x+1, y, barW, bH, [3,3,0,0]);
+    ctx.fill();
+  });
+
+  // X labels (show every ~7th)
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim()||'#888';
+  ctx.font = `9px 'DM Mono'`;
+  ctx.textAlign = 'center';
+  const step = Math.ceil(labels.length/7);
+  labels.forEach((l,i) => {
+    if (i % step === 0) {
+      const x = pad.l + i * (cW/vals.length) + barW/2;
+      ctx.fillText(l.slice(5), x, H-8);
+    }
+  });
+}
+
+function renderRecentActivity() {
+  const recent = allSessions.slice(0,8);
+  if (!recent.length) {
+    document.getElementById('recent-activity').innerHTML = '<div style="color:var(--muted);font-size:13px">No activity yet.</div>';
+    return;
+  }
+  document.getElementById('recent-activity').innerHTML = recent.map(s => {
+    const member = allMembers.find(m => m.user_id === s.user_id);
+    const name = member?.profiles?.full_name || member?.profiles?.email || 'Unknown';
+    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const color = memberColor(s.user_id);
+    const cost = parseFloat(s.cost_gpt4o)||0;
+    return `<div class="activity-item">
+      <div class="activity-av" style="background:${color}">${initials}</div>
+      <div>
+        <div class="activity-text"><strong>${name}</strong> sent a prompt via <strong>${s.source_url||'web'}</strong> using <strong>${s.model_used||'unknown'}</strong> — ${fmtNum(s.tokens||0)} tokens ($${cost.toFixed(5)})</div>
+        <div class="activity-time">${fmtTime(s.created_at)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderFullMemberTable() {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthSessions = allSessions.filter(s => s.created_at >= monthStart);
+
+  const byMember = {};
+  monthSessions.forEach(s => {
+    if (!byMember[s.user_id]) byMember[s.user_id] = { tokens:0, spend:0 };
+    byMember[s.user_id].tokens += s.tokens||0;
+    byMember[s.user_id].spend += parseFloat(s.cost_gpt4o)||0;
+  });
+
+  document.getElementById('full-member-body').innerHTML = allMembers.map(m => {
+    const stats = byMember[m.user_id]||{tokens:0,spend:0};
+    const name = m.profiles?.full_name||m.profiles?.email||'Unknown';
+    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const color = memberColor(m.user_id);
+    const isOwner = m.role === 'owner';
+    return `<tr>
+      <td><div class="member-info">
+        <div class="member-av" style="background:${color}">${initials}</div>
+        <div><div class="member-name">${name}</div><div class="member-email">${m.profiles?.email||''}</div></div>
+      </div></td>
+      <td><span class="role-badge ${m.role}">${m.role}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px">${fmtNum(stats.tokens)}</span></td>
+      <td><span style="font-family:'DM Mono',monospace;font-size:12px">$${stats.spend.toFixed(4)}</span></td>
+      <td><span style="font-size:12px;color:var(--muted)">—</span></td>
+      <td>${!isOwner ? `<button class="btn-icon" onclick="removeMember('${m.user_id}')" style="font-size:11px;color:var(--danger);border-color:rgba(220,38,38,.2)">Remove</button>` : ''}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:24px;font-size:13px">No members found.</td></tr>';
+}
+
+function renderBudgets() {
+  if (!allMembers.length) {
+    document.getElementById('budgets-list').innerHTML = '<div style="color:var(--muted);font-size:13px">No members yet.</div>';
+    return;
+  }
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const monthSessions = allSessions.filter(s => s.created_at >= monthStart);
+  const byMember = {};
+  monthSessions.forEach(s => {
+    if (!byMember[s.user_id]) byMember[s.user_id] = 0;
+    byMember[s.user_id] += parseFloat(s.cost_gpt4o)||0;
+  });
+
+  document.getElementById('budgets-list').innerHTML = allMembers.map(m => {
+    const name = m.profiles?.full_name||m.profiles?.email||'Unknown';
+    const spent = byMember[m.user_id]||0;
+    const limit = budgetEdits[m.user_id] ?? (m.monthly_budget||50);
+    const pct = Math.min(100, spent/limit*100);
+    const cls = pct>90?'danger':pct>70?'warn':'safe';
+    return `<div class="budget-item">
+      <div class="budget-who">
+        <div class="budget-who-name">${name}</div>
+        <div class="budget-who-role">${m.role}</div>
+      </div>
+      <div class="budget-track">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:4px">
+          <span>$${spent.toFixed(4)} spent</span><span>${pct.toFixed(0)}%</span>
+        </div>
+        <div class="budget-bar-wrap">
+          <div class="budget-bar"><div class="budget-bar-fill ${cls}" style="width:${pct}%"></div></div>
+          <span class="budget-nums">/ $<input class="budget-limit-input" type="number" value="${limit}" min="1" onchange="budgetEdits['${m.user_id}']=parseFloat(this.value)||50" style="width:60px"></span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveBudgets() {
+  for (const [userId, limit] of Object.entries(budgetEdits)) {
+    await sb.from('team_members')
+      .update({ monthly_budget: limit })
+      .eq('user_id', userId)
+      .eq('team_id', currentWorkspace.id);
+  }
+  budgetEdits = {};
+  toast('✓ Budgets saved');
+}
+
+function renderActivity() {
+  const list = document.getElementById('activity-list');
+  if (!list) return;
+  if (!allSessions.length) {
+    list.innerHTML = '<div style="color:var(--muted);font-size:13px">No activity logged yet. Install the TokenWise extension to start tracking.</div>';
+    return;
+  }
+  list.innerHTML = allSessions.slice(0,50).map(s => {
+    const member = allMembers.find(m => m.user_id === s.user_id);
+    const name = member?.profiles?.full_name || member?.profiles?.email || 'Unknown';
+    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const color = memberColor(s.user_id);
+    const cost = parseFloat(s.cost_gpt4o)||0;
+    const model = s.model_used||'—';
+    const tokens = fmtNum(s.tokens||0);
+    return `<div class="activity-item">
+      <div class="activity-av" style="background:${color}">${initials}</div>
+      <div style="flex:1">
+        <div class="activity-text">
+          <strong>${name}</strong> · <span style="font-family:'DM Mono',monospace;font-size:11px">${model}</span> · ${tokens} tokens · <strong>$${cost.toFixed(5)}</strong> · ${s.source_url||'—'}
+        </div>
+        <div class="activity-time">${fmtTime(s.created_at)}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Populate member filter
+  const mf = document.getElementById('activity-member-filter');
+  if (mf && mf.options.length <= 1) {
+    allMembers.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m.user_id;
+      opt.textContent = m.profiles?.full_name || m.profiles?.email || 'Unknown';
+      mf.appendChild(opt);
+    });
+  }
+}
+
+function loadActivity() {
+  const mFilter = document.getElementById('activity-member-filter')?.value;
+  const modelFilter = document.getElementById('activity-model-filter')?.value;
+  let filtered = allSessions;
+  if (mFilter) filtered = filtered.filter(s => s.user_id === mFilter);
+  if (modelFilter) filtered = filtered.filter(s => (s.model_used||'').toLowerCase().includes(modelFilter));
+
+  const list = document.getElementById('activity-list');
+  list.innerHTML = filtered.slice(0,50).map(s => {
+    const member = allMembers.find(m => m.user_id === s.user_id);
+    const name = member?.profiles?.full_name || member?.profiles?.email || 'Unknown';
+    const initials = name.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();
+    const color = memberColor(s.user_id);
+    const cost = parseFloat(s.cost_gpt4o)||0;
+    return `<div class="activity-item">
+      <div class="activity-av" style="background:${color}">${initials}</div>
+      <div>
+        <div class="activity-text"><strong>${name}</strong> · ${s.model_used||'—'} · ${fmtNum(s.tokens||0)} tokens · $${cost.toFixed(5)}</div>
+        <div class="activity-time">${fmtTime(s.created_at)}</div>
+      </div>
+    </div>`;
+  }).join('') || '<div style="color:var(--muted);font-size:13px">No results.</div>';
+}
+
+function renderReportPreview() {
+  const totalSpend = allSessions.reduce((s,x) => s+(parseFloat(x.cost_gpt4o)||0), 0);
+  const totalTokens = allSessions.reduce((s,x) => s+(x.tokens||0), 0);
+  const period = document.getElementById('period-select')?.value||30;
+
+  const byMember = {};
+  allSessions.forEach(s => {
+    const m = allMembers.find(x => x.user_id === s.user_id);
+    const name = m?.profiles?.full_name||m?.profiles?.email||'Unknown';
+    if (!byMember[name]) byMember[name] = 0;
+    byMember[name] += parseFloat(s.cost_gpt4o)||0;
+  });
+
+  const memberLines = Object.entries(byMember).sort((a,b)=>b[1]-a[1])
+    .map(([n,c]) => `  ${n.padEnd(24)} $${c.toFixed(4)}`).join('\n');
+
+  document.getElementById('report-preview').innerHTML = `
+<strong>TokenWise Team Report — ${currentWorkspace?.name||'My Workspace'}</strong>
+Period: Last ${period} days
+Generated: ${new Date().toLocaleDateString()}
+
+────────────────────────────────
+SUMMARY
+────────────────────────────────
+Total spend:    <strong>$${totalSpend.toFixed(4)}</strong>
+Total tokens:   <strong>${fmtNum(totalTokens)}</strong>
+Total prompts:  <strong>${allSessions.length}</strong>
+Active members: <strong>${new Set(allSessions.map(s=>s.user_id)).size}</strong>
+
+────────────────────────────────
+SPEND BY MEMBER
+────────────────────────────────
+${memberLines||'  No data yet.'}`;
+}
+
+function renderProjectsReport() {
+  const el = document.getElementById('projects-report-list');
+  if (!el) return;
+  el.innerHTML = allProjects.length
+    ? allProjects.map(p => `<div class="project-item">
+        <div class="project-color" style="background:${p.color||'var(--accent)'}"></div>
+        <div><div class="project-name">${p.name}</div><div class="project-meta">0 sessions logged</div></div>
+        <div class="project-cost">$0.0000</div>
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px">No projects created yet. Add projects to track per-client costs.</div>';
+}
+
+// ── MEMBERS ─────────────────────────────────────────────────────────────────
+async function inviteMember() {
+  const email = document.getElementById('invite-email-input')?.value.trim();
+  const role = document.getElementById('invite-role-select')?.value||'member';
+  if (!email) { toast('Enter an email address'); return; }
+  await doInvite(email, role);
+}
+
+async function inviteFromModal() {
+  const email = document.getElementById('modal-invite-email')?.value.trim();
+  const role = document.getElementById('modal-invite-role')?.value||'member';
+  if (!email) return;
+  await doInvite(email, role);
+  closeModal('invite-modal');
+}
+
+async function doInvite(email, role) {
+  if (!currentWorkspace) return;
+  // Look up user by email
+  const { data: profile } = await sb.from('profiles').select('id').eq('email', email).single();
+  if (!profile) { toast('User not found — they need a TokenWise account first'); return; }
+  const { error } = await sb.from('team_members').insert({
+    team_id: currentWorkspace.id, user_id: profile.id, role
+  });
+  if (error) { toast('Could not add member: ' + error.message); return; }
+  toast(`✓ ${email} added as ${role}`);
+  await loadDashboard();
+}
+
+async function removeMember(userId) {
+  if (!confirm('Remove this member from the workspace?')) return;
+  await sb.from('team_members').delete().eq('team_id', currentWorkspace.id).eq('user_id', userId);
+  toast('✓ Member removed');
+  await loadDashboard();
+}
+
+// ── PROJECTS ─────────────────────────────────────────────────────────────────
+async function createProject() {
+  const name = document.getElementById('project-name-input')?.value.trim();
+  const budget = parseFloat(document.getElementById('project-budget-input')?.value)||null;
+  if (!name || !currentWorkspace) { toast('Enter a project name'); return; }
+  const { data, error } = await sb.from('projects').insert({
+    team_id: currentWorkspace.id,
+    name,
+    budget,
+    color: selectedProjectColor,
+    created_by: currentUser.id
+  }).select().single();
+  if (error) { toast('Error: ' + error.message); return; }
+  allProjects.push(data);
+  renderProjectsList();
+  renderProjectsReport();
+  closeModal('new-project-modal');
+  toast('✓ Project created');
+}
+
+function selectColor(el) {
+  document.querySelectorAll('.color-opt').forEach(c => c.style.border = '2px solid transparent');
+  el.style.border = '2px solid var(--text)';
+  selectedProjectColor = el.dataset.color;
+}
+
+async function loadProjects() {
+  if (!currentWorkspace) return;
+  const { data } = await sb.from('projects').select('*').eq('team_id', currentWorkspace.id);
+  allProjects = data||[];
+  renderProjectsList();
+}
+
+function renderProjectsList() {
+  const el = document.getElementById('projects-list');
+  if (!el) return;
+  el.innerHTML = allProjects.length ? allProjects.map(p => `
+    <div class="project-item">
+      <div class="project-color" style="background:${p.color||'var(--accent)'}"></div>
+      <div style="flex:1">
+        <div class="project-name">${p.name}</div>
+        <div class="project-meta">Budget: ${p.budget ? '$'+p.budget+'/mo' : 'No limit'}</div>
+      </div>
+      <div class="project-cost">$0.0000</div>
+      <button class="btn-icon" style="font-size:11px" onclick="deleteProject('${p.id}')">Delete</button>
+    </div>`).join('')
+    : `<div class="empty-state"><div class="emoji">📁</div><h3>No projects yet</h3><p>Create projects to track AI spending per client or campaign.</p></div>`;
+}
+
+async function deleteProject(id) {
+  if (!confirm('Delete this project?')) return;
+  await sb.from('projects').delete().eq('id', id);
+  allProjects = allProjects.filter(p => p.id !== id);
+  renderProjectsList();
+  toast('✓ Project deleted');
+}
+
+// ── EXPORT ────────────────────────────────────────────────────────────────────
+function exportCSV() {
+  if (!allSessions.length) { toast('No data to export'); return; }
+  const headers = ['Date','Member','Model','Site','Tokens','Words','Cost (USD)'];
+  const rows = allSessions.map(s => {
+    const m = allMembers.find(x => x.user_id === s.user_id);
+    const name = m?.profiles?.full_name||m?.profiles?.email||'Unknown';
+    return [
+      new Date(s.created_at).toLocaleDateString(),
+      name,
+      s.model_used||'',
+      s.source_url||'',
+      s.tokens||0,
+      s.words||0,
+      (parseFloat(s.cost_gpt4o)||0).toFixed(8)
+    ].map(v => `"${v}"`).join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  downloadFile(csv, `tokenwise-team-report-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+  toast('✓ CSV downloaded');
+}
+
+function exportInvoiceCSV() {
+  const totalSpend = allSessions.reduce((s,x)=>s+(parseFloat(x.cost_gpt4o)||0),0);
+  const rows = [
+    ['TokenWise Invoice Export'],
+    ['Workspace:', currentWorkspace?.name||''],
+    ['Period:', 'Last ' + (document.getElementById('period-select')?.value||30) + ' days'],
+    ['Generated:', new Date().toLocaleDateString()],
+    [],
+    ['Member','Total Tokens','Total Cost (USD)'],
+    ...allMembers.map(m => {
+      const sessions = allSessions.filter(s => s.user_id === m.user_id);
+      const tokens = sessions.reduce((s,x)=>s+(x.tokens||0),0);
+      const cost = sessions.reduce((s,x)=>s+(parseFloat(x.cost_gpt4o)||0),0);
+      return [m.profiles?.full_name||m.profiles?.email||'Unknown', tokens, cost.toFixed(6)];
+    }),
+    [],
+    ['TOTAL', allSessions.reduce((s,x)=>s+(x.tokens||0),0), totalSpend.toFixed(6)]
+  ].map(row => row.map(v=>`"${v}"`).join(',')).join('\n');
+  downloadFile(rows, `tokenwise-invoice-${new Date().toISOString().split('T')[0]}.csv`, 'text/csv');
+  toast('✓ Invoice CSV downloaded');
+}
+
+function copyReport() {
+  const el = document.getElementById('report-preview');
+  navigator.clipboard.writeText(el.innerText).then(() => toast('✓ Report copied'));
+}
+
+function downloadFile(content, filename, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = filename;
+  a.click();
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+async function saveSettings() {
+  const name = document.getElementById('ws-name-input')?.value.trim();
+  if (name && currentWorkspace) {
+    await sb.from('teams').update({ name }).eq('id', currentWorkspace.id);
+    currentWorkspace.name = name;
+    document.getElementById('ws-title').textContent = name;
+    const opt = document.querySelector(`#ws-select option[value="${currentWorkspace.id}"]`);
+    if (opt) opt.textContent = name;
+    toast('✓ Settings saved');
+  }
+}
+
+async function confirmDeleteWorkspace() {
+  if (!confirm(`Delete "${currentWorkspace?.name}" and all its data? This cannot be undone.`)) return;
+  await sb.from('teams').delete().eq('id', currentWorkspace.id);
+  toast('Workspace deleted');
+  await sb.auth.signOut();
+}
+
+// ── CHECKOUT ──────────────────────────────────────────────────────────────────
+function goToCheckout() {
+  window.open(LEMON_TEAM_PRO_LINK, '_blank');
+}
+
+// ── UI HELPERS ────────────────────────────────────────────────────────────────
+function showPanel(name, el) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('panel-'+name)?.classList.add('active');
+  el?.classList.add('active');
+  if (name === 'projects') loadProjects();
+}
+
+function renderHeader() {
+  const name = currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'You';
+  document.getElementById('header-name').textContent = name.split(' ')[0];
+  document.getElementById('header-av').textContent = name.charAt(0).toUpperCase();
+  const role = allWorkspaces[0]?.role||'member';
+  document.getElementById('settings-role').textContent = role;
+  const isPro = currentProfile?.plan === 'pro';
+  document.getElementById('sidebar-plan').textContent = isPro ? 'Pro Plan' : 'Free Plan';
+  document.getElementById('sidebar-plan-sub').textContent = isPro ? 'Unlimited members + features' : 'Up to 3 members';
+}
+
+function openModal(id) { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key==='Escape') document.querySelectorAll('.modal-overlay.open').forEach(m=>m.classList.remove('open'));
+});
+
+function applyTheme() {
+  const dark = localStorage.getItem('tw-theme') === 'dark';
+  document.body.classList.toggle('dark', dark);
+  const btn = document.getElementById('theme-toggle');
+  if (btn) btn.textContent = dark ? '☀️' : '🌙';
+}
+document.getElementById('theme-toggle')?.addEventListener('click', () => {
+  const isDark = document.body.classList.toggle('dark');
+  localStorage.setItem('tw-theme', isDark ? 'dark' : 'light');
+  document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+  renderSpendChart(parseInt(document.getElementById('period-select')?.value||30));
+});
+
+function show(id, display='block') { const el=document.getElementById(id); if(el) el.style.display=display; }
+function hide(id) { const el=document.getElementById(id); if(el) el.style.display='none'; }
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+function showErr(el, msg) { el.textContent=msg; el.style.display='block'; }
+function setBtnLoading(id, txt) { const b=document.getElementById(id); if(b){b.disabled=true;b.textContent=txt;} }
+function resetBtn(id, txt) { const b=document.getElementById(id); if(b){b.disabled=false;b.textContent=txt;} }
+function fmtNum(n) { if(!n)return'0'; if(n>=1e6)return(n/1e6).toFixed(1)+'M'; if(n>=1000)return(n/1000).toFixed(1)+'K'; return n.toLocaleString(); }
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), now = new Date();
+  const diff = now-d;
+  if (diff < 60000) return 'just now';
+  if (diff < 3600000) return Math.floor(diff/60000)+'m ago';
+  if (diff < 86400000) return Math.floor(diff/3600000)+'h ago';
+  return d.toLocaleDateString();
+}
+const COLORS = ['#00a572','#6d55e8','#e05a1a','#2a72c8','#b8832a','#2a9a6a','#9333ea','#0891b2'];
+function memberColor(userId) {
+  let hash = 0;
+  for (let i=0;i<userId.length;i++) hash = userId.charCodeAt(i) + ((hash<<5)-hash);
+  return COLORS[Math.abs(hash) % COLORS.length];
+}
+</script>
+</body>
+</html>

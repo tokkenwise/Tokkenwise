@@ -1,0 +1,300 @@
+/* TokenWise Widget — injected into Claude, ChatGPT, Gemini */
+/* Scoped to #tokenwise-widget to avoid clashing with page styles */
+
+#tokenwise-widget {
+  --tw-bg: #ffffff;
+  --tw-surface: #f8f8f6;
+  --tw-border: rgba(0,0,0,0.10);
+  --tw-text: #1a1a1a;
+  --tw-muted: #888880;
+  --tw-accent: #00a572;
+  --tw-accent2: #6d55e8;
+  --tw-warn: #e05a1a;
+  --tw-danger: #dc2626;
+  --tw-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08);
+
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 220px;
+  z-index: 2147483640;
+  background: var(--tw-bg);
+  border: 1px solid var(--tw-border);
+  border-radius: 14px;
+  box-shadow: var(--tw-shadow);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: var(--tw-text);
+  user-select: none;
+  transition: opacity 0.2s;
+  overflow: hidden;
+}
+
+#tokenwise-widget[data-theme="dark"] {
+  --tw-bg: #1a1a18;
+  --tw-surface: #222220;
+  --tw-border: rgba(255,255,255,0.10);
+  --tw-text: #f0ede8;
+  --tw-muted: #8a8880;
+  --tw-accent: #00d68f;
+  --tw-accent2: #a78bfa;
+  --tw-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* HEADER */
+.tw-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--tw-border);
+  background: var(--tw-surface);
+}
+
+.tw-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Syne', 'DM Sans', sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: -0.2px;
+  color: var(--tw-text);
+}
+
+.tw-controls {
+  display: flex;
+  gap: 2px;
+}
+
+.tw-btn-icon {
+  background: none;
+  border: none;
+  color: var(--tw-muted);
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.tw-btn-icon:hover {
+  background: var(--tw-border);
+  color: var(--tw-text);
+}
+
+/* BODY */
+.tw-body {
+  padding: 12px;
+}
+
+/* MAIN STAT */
+.tw-main-stat {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.tw-token-count {
+  font-family: 'Syne', 'DM Sans', monospace;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  color: var(--tw-accent);
+  line-height: 1;
+}
+
+.tw-token-label {
+  font-size: 10px;
+  color: var(--tw-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 2px;
+  font-family: 'DM Mono', monospace;
+}
+
+.tw-cost {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--tw-muted);
+  margin-top: 4px;
+}
+
+/* CONTEXT BAR */
+.tw-context-bar-wrap {
+  margin-bottom: 10px;
+}
+
+.tw-context-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--tw-muted);
+  margin-bottom: 4px;
+  font-family: 'DM Mono', monospace;
+}
+
+.tw-context-bar {
+  height: 3px;
+  background: var(--tw-surface);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid var(--tw-border);
+}
+
+.tw-context-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--tw-accent), var(--tw-accent2));
+  border-radius: 3px;
+  transition: width 0.2s ease, background 0.3s;
+}
+
+.tw-context-fill.tw-fill-warn {
+  background: linear-gradient(90deg, #f59e0b, var(--tw-warn));
+}
+
+.tw-context-fill.tw-fill-danger {
+  background: linear-gradient(90deg, var(--tw-warn), var(--tw-danger));
+}
+
+.tw-context-limit {
+  font-size: 9px;
+  color: var(--tw-muted);
+  text-align: right;
+  margin-top: 3px;
+  font-family: 'DM Mono', monospace;
+}
+
+/* MODEL SELECT */
+.tw-model-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.tw-model-label {
+  font-size: 10px;
+  color: var(--tw-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  white-space: nowrap;
+  font-family: 'DM Mono', monospace;
+}
+
+.tw-model-select {
+  flex: 1;
+  background: var(--tw-surface);
+  border: 1px solid var(--tw-border);
+  border-radius: 6px;
+  color: var(--tw-text);
+  font-size: 11px;
+  padding: 4px 6px;
+  outline: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  transition: border-color 0.15s;
+}
+
+.tw-model-select:focus {
+  border-color: var(--tw-accent);
+}
+
+/* STATS ROW */
+.tw-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tw-stat {
+  background: var(--tw-surface);
+  border: 1px solid var(--tw-border);
+  border-radius: 7px;
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.tw-stat-val {
+  font-family: 'Syne', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--tw-text);
+  line-height: 1;
+}
+
+.tw-stat-key {
+  font-size: 9px;
+  color: var(--tw-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+  font-family: 'DM Mono', monospace;
+}
+
+/* WARNING BANNER */
+.tw-warn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(224, 90, 26, 0.08);
+  border: 1px solid rgba(224, 90, 26, 0.2);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: var(--tw-warn);
+}
+
+/* MINIMIZED STATE */
+.tw-minimized {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.tw-minimized:hover {
+  background: var(--tw-surface);
+}
+
+.tw-minimized span:first-child {
+  font-family: 'Syne', monospace;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--tw-accent);
+}
+
+.tw-mini-label {
+  font-size: 10px;
+  color: var(--tw-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* Smart switch warning */
+.tw-switch-warn {
+  display:flex; align-items:flex-start; gap:6px;
+  background:rgba(224,90,26,.08); border:1px solid rgba(224,90,26,.2);
+  border-radius:7px; padding:7px 8px; margin-top:6px; font-size:10px; color:var(--warn);
+}
+
+/* Context portability banner */
+.tw-ctx-banner {
+  display:flex; align-items:center; gap:6px;
+  background:rgba(0,165,114,.08); border:1px solid rgba(0,165,114,.2);
+  border-radius:7px; padding:7px 8px; margin-top:6px; font-size:10px; color:var(--accent);
+}
+
+.tw-carry-btn {
+  background:none; border:1px solid currentColor; border-radius:5px;
+  padding:2px 7px; font-size:10px; font-weight:700; cursor:pointer;
+  color:inherit; font-family:'DM Sans',sans-serif; white-space:nowrap; flex-shrink:0;
+}
+.tw-carry-btn:hover { opacity:.8; }
