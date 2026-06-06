@@ -3,9 +3,9 @@
 
 export const CONFIG = {
   SUPABASE_URL: 'https://eojugvrsovcheebdtwfc.supabase.co',
-  SUPABASE_ANON_KEY: 'PASTE_YOUR_SUPABASE_ANON_KEY_HERE',
-  NETLIFY_BASE: 'https://charming-paprenjak-a981d7.netlify.app/.netlify/functions',
-  APP_URL: 'https://charming-paprenjak-a981d7.netlify.app/frontend/app.html',
+  SUPABASE_ANON_KEY: 'sb_publishable_T0JGBsYoRrBRM34qor3BZA_0QP8IG2C',
+  NETLIFY_BASE: 'https://scintillating-snickerdoodle-c87a1a.netlify.app/.netlify/functions',
+  APP_URL: 'https://scintillating-snickerdoodle-c87a1a.netlify.app/frontend/app.html',
   VERSION: '1.0.0',
 };
 
