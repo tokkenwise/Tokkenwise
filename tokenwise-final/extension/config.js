@@ -2,7 +2,7 @@
 // Used by background.js, popup, and content scripts
 
 export const CONFIG = {
-  SUPABASE_URL: 'https://eojugvrsovcheebdtwfc.supabase.co',
+  SUPABASE_URL: 'https://txpcmysqyyxtkqvlmhxs.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_T0JGBsYoRrBRM34qor3BZA_0QP8IG2C',
   NETLIFY_BASE: 'https://scintillating-snickerdoodle-c87a1a.netlify.app/.netlify/functions',
   APP_URL: 'https://scintillating-snickerdoodle-c87a1a.netlify.app/frontend/app.html',
