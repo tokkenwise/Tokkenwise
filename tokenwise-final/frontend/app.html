@@ -308,25 +308,6 @@ canvas{width:100%!important}
 <!-- SheetJS for Excel parsing -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <!-- Sentry error monitoring -->
-<script src="https://js.sentry-cdn.com/YOUR_SENTRY_DSN.min.js" crossorigin="anonymous"></script>
-<script>
-  // Sentry auto-initializes from the CDN script above.
-  // Replace YOUR_SENTRY_DSN in the src above with your actual DSN from sentry.io
-  // Example DSN: https://abc123@o123456.ingest.sentry.io/123456
-  if (window.Sentry) {
-    Sentry.init({
-      dsn: 'YOUR_SENTRY_DSN_HERE',
-      environment: window.location.hostname.includes('localhost') ? 'development' : 'production',
-      tracesSampleRate: 0.1,
-      beforeSend(event) {
-        // Strip any auth tokens from error reports
-        if (event.request && event.request.headers) {
-          delete event.request.headers['Authorization'];
-        }
-        return event;
-      }
-    });
-  }
 </script>
 </head>
 <body>
