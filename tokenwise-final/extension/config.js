@@ -3,7 +3,7 @@
 
 export const CONFIG = {
   SUPABASE_URL: 'https://txpcmysqyyxtkqvlmhxs.supabase.co',
-  SUPABASE_ANON_KEY: 'sb_publishable_T0JGBsYoRrBRM34qor3BZA_0QP8IG2C',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR4cGNteXNxeXl4dGtxdmxtaHhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA2ODU0NzMsImV4cCI6MjA5NjI2MTQ3M30.mlPJ57wByyeFA-NcIJn6j6aSQk2fv01rcYg-ZmUSmAo',
   NETLIFY_BASE: 'https://scintillating-snickerdoodle-c87a1a.netlify.app/.netlify/functions',
   APP_URL: 'https://scintillating-snickerdoodle-c87a1a.netlify.app/frontend/app.html',
   VERSION: '1.0.0',
